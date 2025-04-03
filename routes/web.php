@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\AlmacenController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -33,6 +34,13 @@ Route::group(['middleware' => 'auth'], function() {
     Route::resource('users', UsuarioController::class)->except([
         'show'
     ]);
+    Route::resource('almacen', AlmacenController::class)->except([
+        'show'
+    ]);
+
+    Route::get('/almacen/karness/{almacen}/{id}', [AlmacenController::class, 'karness'])->name('almacen.karness');
+
+    
 });
 
 require __DIR__.'/auth.php';
