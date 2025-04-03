@@ -1,0 +1,36 @@
+Cambios realizados 3.04.2025
+
+app/Http/Controllers/AlmacenController.php
+
+Se creo el controlador AlmacenController con dos metodos 
+index () y karness()
+
+app/livewire/karnessList.php
+se creo el archivo livewire karnessList para la actualización de los cuadros de karness
+(tarea: mejorar proceso de carga ya que muestra problemas cuando se entra en un insumo y se vuelve a la pagina)
+
+app/Models/ControlCebado.php
+app/Models/Insumos.php
+app/Models/Karness.php
+app/Models/MovimientoAlmacen.php
+Se crearon los modelos para la base de datos
+
+
+
+config/livewire.php
+Necesario para usar livewire
+
+resources/views/almacen/index.blade.php
+new file:   resources/views/almacen/karness.blade.php
+new file:   resources/views/control_cebado/index.blade.php
+new file:   resources/views/inventario/index.blade.php
+creación de paginas de la vizualización del almacen
+
+new file:   resources/views/livewire/karness-list.blade.php
+componente livewire para la actualización de los karness 
+
+modified:   resources/views/livewire/layout/navigation.blade.php
+agregración de la pagina almacen 
+
+//////////////////////////////////////////////////////////////////////////////
+
