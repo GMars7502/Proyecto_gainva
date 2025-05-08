@@ -42,9 +42,21 @@ new class extends Component
                 </x-nav-link>
                 </div>
                 @endcan
+                
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('almacen.index')" :active="request()->routeIs('almacen.*')" wire:navigate>
                         {{ __('Almacen') }}
+                    </x-nav-link>
+                </div>
+
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <x-nav-link :href="route('control_cebado.index')" :active="request()->routeIs('control_cebado.*')" wire:navigate>
+                        {{ __('Control Cebado') }}
+                    </x-nav-link>
+                </div>
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <x-nav-link :href="route('inventario.index')" :active="request()->routeIs('inventario.*')" wire:navigate>
+                        {{ __('Inventario') }}
                     </x-nav-link>
                 </div>
 

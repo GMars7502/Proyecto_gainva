@@ -1,7 +1,7 @@
 <x-app-layout>
     <div class="container mx-auto p-6 space-y-6">
         <!-- Selector de almacén -->
-        <livewire:karness-list />
+        <livewire:components.karness-list />
         <!-- Barra de búsqueda -->
         <div class="bg-white shadow-md p-5 rounded-lg">
             <label class="block font-semibold text-lg text-gray-700">Buscar Insumo</label>

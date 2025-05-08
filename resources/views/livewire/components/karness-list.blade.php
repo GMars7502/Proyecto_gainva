@@ -21,7 +21,7 @@
                 <ul class="mt-3 space-y-1">
                     @foreach ($kar->insumos as $insumo)
                         <li>
-                            <a href="{{ route('almacen.karness', ['id' => $insumo->idInsumo, 'almacen' => $inventario]) }}" class="block text-sm opacity-80 hover:opacity-100 hover:text-yellow-300 transition">
+                            <a href="{{ route('almacen.karness', ['insumoId' => $insumo->idInsumo, 'almacen' => $inventario]) }}" class="block text-sm opacity-80 hover:opacity-100 hover:text-yellow-300 transition">
                                 {{ $insumo->Nombre }}
                             </a>
                         </li>
@@ -30,23 +30,5 @@
             </div>
         @endforeach
     </div>
+    
 </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Seleccionar el elemento <select>
-        let selectInventario = document.querySelector("select[wire\\:model]");
-
-        if (selectInventario) {
-            // Detectar cuando el usuario cambia el select
-            selectInventario.addEventListener("change", function () {
-                Livewire.emit("inventarioCambiado", this.value);
-            });
-        }
-
-        // Detectar cuando el usuario regresa a la página (Back button o recarga)
-        window.addEventListener("pageshow", function (event) {
-            Livewire.emit("inventarioCambiado", selectInventario.value);
-        });
-    });
-</script>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Components;
 
 use Livewire\Component;
 use App\Models\Karness;
@@ -67,7 +67,7 @@ class KarnessList extends Component
     public function render()
     {
         $inventario = $this->inventario;
-        return view('livewire.karness-list');
+        return view('livewire.components.karness-list');
     }
 
     public function hydrate()

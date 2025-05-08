@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class MovimientoAlmacen extends Model
 {
     use HasFactory;
+    protected $primaryKey = 'idMovimiento';
     protected $table = 'movimiento_almacen';
     protected $fillable = [
         'fk_insumos',
