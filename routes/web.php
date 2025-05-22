@@ -3,6 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AlmacenController;
+use App\Http\Controllers\ControlCebadoController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\MovimientoController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -37,8 +41,35 @@ Route::group(['middleware' => 'auth'], function() {
     Route::resource('almacen', AlmacenController::class)->except([
         'show'
     ]);
+    Route::resource('control_cebado',ControlCebadoController::class)->except([
+        'show'
+    ]);
+    Route::resource('inventario', InventarioController::class)->except([
+        'show'
+    ]);
 
-    Route::get('/almacen/karness/{almacen}/{id}', [AlmacenController::class, 'karness'])->name('almacen.karness');
+    Route::resource('movimiento_almacen', MovimientoController::class)->except([
+        'show'
+    ]);
+
+
+    Route::get('/movimiento_almacen/get-movimientos/{insumoId}', [MovimientoController::class, 'getMovimientos']);
+
+
+    Route::get('/movimiento_almacen/get-navegacion/{insumoId}', [MovimientoController::class, 'getNavegacion'])->name('movimiento_almacen.getNavegacion');
+
+    Route::get('/movimiento_almacen/show-movimiento/{movimientoId}', [MovimientoController::class, 'showMovimiento'])->name('movimiento_almacen.showMovimiento');
+
+    Route::post('/movimiento_almacen/store-movimiento', [MovimientoController::class, 'storeMovimiento'])->name('movimiento_almacen.storeMovimiento');
+
+    Route::put('/movimiento_almacen/update-movimiento/{movimientoId}', [MovimientoController::class, 'updateMovimiento'])->name('movimiento_almacen.updateMovimiento');
+
+
+
+
+    
+    Route::get('/almacen/karness/{almacen}/{insumoId}', [AlmacenController::class, 'karness'])->name('almacen.karness');
+
 
     
 });
