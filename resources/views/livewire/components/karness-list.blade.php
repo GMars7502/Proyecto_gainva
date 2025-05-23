@@ -1,6 +1,3 @@
-
-
-
 <div class="container mx-auto p-6 space-y-6">
 
     <!-- Selector de almacén -->
