@@ -43,14 +43,63 @@ export default ( config ) => ({
 
 
 
-        // Propiedades para modales 
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||Variables para modales|||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-        //Modal eliminar 
+        //#Modal eliminar 
         showConfirmDeleteModal: false, // Para controlar la visibilidad del modal
         movementIdToDelete: null,    // Para guardar el ID del movimiento a borrar
         isDeletingMovement: false,
 
-        
+        //#Modal Crear 
+        showCreateModal: false,       // Controla la visibilidad del modal de creación
+        createModalTab: 'salidas',
+
+                    // Datos para la pestaña de 'Entradas'
+        newEntrada: {
+            fecha: new Date().toISOString().slice(0,10), // Fecha actual por defecto YYYY-MM-DD
+            cantEntrada: '',
+            factura: '',
+            observacion: '',
+            lote: '',
+            proveedor: ''
+            // Añade otros campos si son necesarios para la entrada
+        },
+
+        // Datos para la pestaña de 'Salidas' (array de objetos)
+        newSalidas: [
+            // Se inicia con una fila por defecto para salidas
+            // { fecha: new Date().toISOString().slice(0,10), cantSaca: '', lote: '', observacion: '' }
+        ],
+        MAX_SALIDAS: 10, // Límite de filas para salidas
+
+        isSavingMovement: false, // Para el estado de carga del botón "Guardar"
+
+        //#Modal Editar
+
+        showEditModal: false,
+        editingMovement: null,
+        editingMovementData: {
+        // idMovimiento: null, // Se tomará del editingMovement
+        // fk_insumos: null,
+        // almacen: '',
+            fecha: '',
+            tipo_movimiento: '', 
+            cant_movida: '',
+            factura_boleta: '',
+            observacion: '',
+            lote: '',
+            proveedor: ''
+        },
+
+        isUpdatingMovement: false, 
+
+
+
+
+
+
 
 
 
@@ -229,9 +278,187 @@ export default ( config ) => ({
 
         // --- Métodos para CRUD de Movimientos (Placeholders) ---
 
+
+
+
+
+        //********************************************************************************************* */
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||Para modal Crear||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //********************************************************************************************* */
+
+
+
         openCreateModal() {
-            console.log("Abrir modal para crear nuevo movimiento...");
-            // Lógica para mostrar un modal de creación
+        console.log("Abriendo modal de creación...");
+        // Resetear los formularios a un estado inicial limpio
+        this.createModalTab = 'salidas'; // Pestaña por defecto
+        this.newEntrada = {
+            fecha: new Date().toISOString().slice(0,10),
+            cantEntrada: '',
+            factura: '',
+            observacion: '',
+            lote: '',
+            proveedor: ''
+        };
+        this.newSalidas = [ // Iniciar con una fila vacía para salidas
+            { id: Date.now(), fecha: new Date().toISOString().slice(0,10), cantSaca: '', lote: '', observacion: '' }
+        ];
+        this.isSavingMovement = false;
+        this.showCreateModal = true;
+        },
+
+        closeCreateModal() {
+            this.showCreateModal = false;
+            // No es estrictamente necesario resetear aquí si lo hacemos en openCreateModal
+        },
+
+        switchCreateTab(tab) {
+            if (tab === 'entradas' || tab === 'salidas') {
+                this.createModalTab = tab;
+                console.log(`Cambiado a pestaña: ${tab}`);
+            }
+        },
+
+        addSalidaRow() {
+            if (this.newSalidas.length < this.MAX_SALIDAS) {
+                this.newSalidas.push({
+                    id: Date.now(), // Un ID temporal para el :key en x-for
+                    fecha: new Date().toISOString().slice(0,10),
+                    cantSaca: '',
+                    lote: '',
+                    observacion: ''
+                });
+            } else {
+                alert(`No se pueden agregar más de ${this.MAX_SALIDAS} salidas a la vez.`);
+            }
+        },
+
+        removeSalidaRow(indexToRemove) {
+            // Usar el índice o un ID único si lo tuvieran los objetos
+            this.newSalidas = this.newSalidas.filter((salida, index) => index !== indexToRemove);
+        },
+
+        /**
+         * Verifica si el campo 'Lote' es requerido para la entrada actual.
+         * Asume que 'this.insumoActual.control_cebado' es 'Y' o true.
+         */
+        isLoteRequiredForEntrada() {
+            // Asegúrate que insumoActual exista y tenga la propiedad control_cebado
+            if (this.insumoActual && (this.insumoActual.control_cebado === 'Y')) {
+                return true;
+            }
+            return false;
+        },
+
+        saveMovements() {
+            this.isSavingMovement = true;
+            console.log("Intentando guardar movimientos...");
+
+            let payload = {
+                tipo: this.createModalTab, // 'entradas' o 'salidas'
+                insumo_id: this.insumoId,
+                almacen: this.almacen, // Pasamos el almacén actual
+                movimientos: []
+            };
+            let isValid = true;
+
+            if (this.createModalTab === 'entradas') {
+                // Validación para Entrada
+                const entrada = this.newEntrada;
+                if (!entrada.fecha || !entrada.cantEntrada) { // Quité Observación de obligatorio según tu descripción
+                    alert('Para Entradas, la Fecha y Cantidad de Entrada son obligatorias.');
+                    isValid = false;
+                }
+                if (this.isLoteRequiredForEntrada() && !entrada.lote) {
+                    alert('Para este insumo, el Lote es obligatorio en las Entradas.');
+                    isValid = false;
+                }
+                if (isValid) {
+                    payload.movimientos.push({
+                        tipo_movimiento: 'entrada', // Campo para el backend
+                        fecha: entrada.fecha,
+                        cant_movida: entrada.cantEntrada,
+                        factura_boleta: entrada.factura, // Nombre de campo para el backend
+                        observacion: entrada.observacion,
+                        lote: entrada.lote,
+                        proveedor: entrada.proveedor
+                        // Otros campos que necesite tu API
+                    });
+                }
+            } else { // 'salidas'
+                // Validación para Salidas
+                if (this.newSalidas.length === 0) {
+                    alert('Debe agregar al menos una fila de salida.');
+                    isValid = false;
+                }
+                this.newSalidas.forEach((salida, index) => {
+                    if (!salida.fecha || !salida.cantSaca) {
+                        alert(`Fila de Salida #${index + 1}: Fecha y Cantidad son obligatorias.`);
+                        isValid = false;
+                    }
+                    // Para salidas, ¿el lote es obligatorio si el insumo tiene control_cebado?
+                    // Asumamos que sí por consistencia si el insumo lo requiere.
+                    if (this.isLoteRequiredForEntrada() && !salida.lote) { // Reutilizo la función, pero el nombre es engañoso aquí
+                        alert(`Fila de Salida #${index + 1}: Para este insumo, el Lote es obligatorio.`);
+                        isValid = false;
+                    }
+
+                    if (isValid) { // Solo añadir si esta fila es válida (o validar todo antes)
+                        payload.movimientos.push({
+                            tipo_movimiento: 'salida', // Campo para el backend
+                            fecha: salida.fecha,
+                            cant_movida: salida.cantSaca,
+                            lote: salida.lote,
+                            observacion: salida.observacion
+                            // Otros campos
+                        });
+                    }
+                });
+                if (!isValid) { // Si alguna salida no fue válida, no enviar nada.
+                    payload.movimientos = [];
+                }
+            }
+
+            if (!isValid || payload.movimientos.length === 0) {
+                console.log("Validación fallida o no hay movimientos para guardar.");
+                this.isSavingMovement = false;
+                return; // Detener si hay errores de validación o no hay nada que guardar
+            }
+
+            console.log("Payload a enviar:", payload);
+
+            // TODO: Definir el endpoint para crear movimientos en config.apiEndpoints.createMovimiento
+            const url = this.apiEndpoints.createMovimiento || '/api/almacen/movimientos'; // Ruta de ejemplo
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': this.csrfToken
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || 'Error al guardar')});
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message || 'Movimiento(s) guardado(s) con éxito.');
+                this.fetchMovimientos(); // Recargar la tabla principal
+                this.closeCreateModal();
+            })
+            .catch(error => {
+                console.error('Error al guardar movimiento(s):', error);
+                alert(`Error: ${error.message}`);
+            })
+            .finally(() => {
+                this.isSavingMovement = false;
+            });
         },
 
         openEditModal(movimiento) {
@@ -244,10 +471,11 @@ export default ( config ) => ({
             // Lógica para mostrar un modal de visualización (solo lectura)
         },
 
-
+        //********************************************************************************************* */
         //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
         //|||||||||||||||||||||||||Para modal eliminar|||||||||||||||||||||||||||||||||||||||||||||||||
         //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //********************************************************************************************* */
 
 
         closeConfirmDeleteModal() {
@@ -325,6 +553,147 @@ export default ( config ) => ({
             });
         },
 
+
+         //********************************************************************************************* */
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||Para modal Editar|||||||||||||||||||||||||||||||||||||||||||||||||||
+        //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+        //********************************************************************************************* */
+
+        openEditModal(movimiento) {
+        console.log("Abriendo modal de edición para:", movimiento);
+        if (!movimiento) {
+            console.error("Se intentó editar un movimiento nulo.");
+            return;
+        }
+        // Guardar el original para referencia (especialmente el ID)
+        this.editingMovement = movimiento;
+
+        // Clonar los datos del movimiento para el formulario
+        // y asegurar que los campos del formulario existan.
+        this.editingMovementData = {
+            idMovimiento: movimiento.idMovimiento, // O como se llame tu PK
+            fk_insumos: movimiento.fk_insumos,     // Generalmente no editable
+            almacen: movimiento.almacen,         // Generalmente no editable
+            fecha: movimiento.fecha ? new Date(movimiento.fecha).toISOString().slice(0,10) : '', // Formato YYYY-MM-DD
+            tipo_movimiento: movimiento.tipo_movimiento, // No editable, pero útil para la lógica
+            cant_movida: movimiento.cant_movida || '',
+            factura_boleta: movimiento.factura_boleta || '',
+            observacion: movimiento.observacion || '',
+            lote: movimiento.lote || '',
+            proveedor: movimiento.proveedor || ''
+            // Copia otros campos editables
+        };
+
+        this.isUpdatingMovement = false;
+        this.showEditModal = true;
+    },
+
+    closeEditModal() {
+        this.showEditModal = false;
+        this.editingMovement = null;
+        this.editingMovementData = { fecha: '', /* ... resetear otros campos ... */ }; // Resetear formulario
+    },
+
+    /**
+     * Verifica si el campo 'Lote' es requerido al editar,
+     * basado en el tipo de movimiento y el control_cebado del insumo.
+     */
+    isLoteRequiredForEdit() {
+        if (this.editingMovementData.tipo_movimiento === 'entrada' && this.insumoActual &&
+            (this.insumoActual.control_cebado === 'Y')) {
+            return true;
+        }
+        // Si estás editando una salida y el lote fue obligatorio al crearla (porque control_cebado era Y)
+        // quizás quieras mantenerlo como obligatorio o editable.
+        // Por simplicidad, lo haremos obligatorio solo para entradas con control_cebado.
+        return false;
+    },
+
+    updateMovement() {
+        if (!this.editingMovement || !this.editingMovementData.idMovimiento) {
+            alert('Error: No hay datos de movimiento para actualizar.');
+            return;
+        }
+
+        this.isUpdatingMovement = true;
+        console.log("Intentando actualizar movimiento:", this.editingMovementData);
+
+        // Validación (similar a la de creación, pero para los campos de edición)
+        let isValid = true;
+        const dataToUpdate = this.editingMovementData;
+
+        if (!dataToUpdate.fecha || !dataToUpdate.cant_movida) {
+            alert('Fecha y Cantidad son obligatorias.');
+            isValid = false;
+        }
+        // Si es una entrada, la observación podría ser obligatoria
+        if (dataToUpdate.tipo_movimiento === 'entrada' && !dataToUpdate.observacion) {
+             // alert('Para Entradas, la Observación es obligatoria.'); // Ajusta según tus reglas
+             // isValid = false;
+        }
+
+        if (this.isLoteRequiredForEdit() && !dataToUpdate.lote) {
+            alert('Para este insumo (tipo entrada), el Lote es obligatorio.');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            this.isUpdatingMovement = false;
+            return;
+        }
+
+        // Preparamos solo los campos que queremos enviar para la actualización.
+        // El backend decidirá qué se puede actualizar realmente.
+        const payload = {
+            fecha: dataToUpdate.fecha,
+            cant_movida: dataToUpdate.cant_movida,
+            observacion: dataToUpdate.observacion,
+            lote: dataToUpdate.lote,
+            // Solo enviar factura y proveedor si es una entrada y tienen valor o son relevantes
+            ...(dataToUpdate.tipo_movimiento === 'entrada' && {
+                 factura_boleta: dataToUpdate.factura_boleta,
+                 proveedor: dataToUpdate.proveedor
+            })
+            // NO enviar tipo_movimiento, fk_insumos, almacen si no son editables
+        };
+
+        // TODO: Definir el endpoint para actualizar en config.apiEndpoints.updateMovimiento
+        const urlTemplate = this.apiEndpoints.updateMovimiento || '/api/almacen/movimientos/{movimientoid}';
+        const url = urlTemplate.replace('{movimientoid}', dataToUpdate.idMovimiento);
+
+        console.log("Payload de actualización a enviar:", payload, "a URL:", url);
+
+        fetch(url, {
+            method: 'PUT', // O 'PATCH' si solo actualizas campos parciales
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': this.csrfToken
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Error al actualizar')});
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message || 'Movimiento actualizado con éxito.');
+            this.fetchMovimientos(); // Recargar la tabla principal
+            this.closeEditModal();
+        })
+        .catch(error => {
+            console.error('Error al actualizar movimiento:', error);
+            alert(`Error: ${error.message}`);
+        })
+        .finally(() => {
+            this.isUpdatingMovement = false;
+        });
+    },
+
+        
         
 
 });

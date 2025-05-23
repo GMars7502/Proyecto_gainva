@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Validator;
 
 
 
-    Se dejo de utilizar:
+    Se dejo de utilizar esta componente:
     Este componente se utilizaba para mostrar los registros de cada Insumo 
     pero se dejo de utilizar por lentitud en la carga de datos.
 

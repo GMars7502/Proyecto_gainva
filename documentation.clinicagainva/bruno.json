@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "documentation.clinicagainva",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

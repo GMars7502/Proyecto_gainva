@@ -13,7 +13,7 @@ use App\Models\MovimientoAlmacen;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Facades\DB;
 
 
 class MovimientoController extends Controller
@@ -128,78 +128,139 @@ class MovimientoController extends Controller
 
     public function storeMovimiento(Request $request)
     {
-        // --- Validación ---
-        $validator = Validator::make($request->all(), [
-            'insumo_id' => 'required|exists:insumos,id', // Asegura que el insumo exista
-            'almacen' => 'required|string|max:100',
-            'fecha' => 'required|date',
-            'tipo_movimiento' => 'required|in:entrada,salida',
-            'cant_movida' => 'required|numeric|min:0', // O min:1 si no se permiten 0
-            'lote' => 'nullable|string|max:100',
-            'observacion' => 'nullable|string|max:255',
-            // Añade otros campos necesarios (ej: proveedor_id, etc.)
-        ]);
+        $tipoOperacion = $request->input('tipo'); // 'entradas' o 'salidas'
+        $insumoId = $request->input('insumo_id');
+        $almacenNombre = $request->input('almacen');
+        $movimientosData = $request->input('movimientos', []); // Array de movimientos
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        if (empty($movimientosData)) {
+            return response()->json(['message' => 'No se proporcionaron datos de movimientos.'], 400);
         }
 
-        // --- Creación ---
-        // DB::beginTransaction(); // Considera usar transacciones si actualizas stock complejo
+        $insumoActual = Insumos::find($insumoId);
+        if (!$insumoActual) {
+            return response()->json(['message' => "Insumo con ID {$insumoId} no encontrado."], 404);
+        }
+        // Asume que control_cebado es 'Y' para verdadero, o 1, o true. Ajusta según tu DB.
+        $loteRequerido = ($insumoActual->control_cebado === 'Y');
+
+        $erroresDeValidacion = [];
+        $movimientosGuardados = [];
+
+        DB::beginTransaction(); // Iniciar transacción
+
         try {
-            $movimiento = Movimiento::create($validator->validated());
+            foreach ($movimientosData as $index => $data) {
+                $reglasBase = [
+                    'fecha' => 'required|date',
+                    'cant_movida' => 'required|numeric|min:0.01', // No permitir 0
+                    'observacion' => ($tipoOperacion === 'entradas') ? 'required|string|max:255' : 'nullable|string|max:255',
+                    'lote' => $loteRequerido ? 'required|string|max:100' : 'nullable|string|max:100',
+                ];
 
-            // --- Recalcular Stock (Opcional - Simplificado) ---
-            // La versión simple es NO recalcular aquí, sino dejar que la
-            // siguiente llamada a getMovimientos lo haga. Si necesitas
-            // recálculo inmediato, sería más complejo.
+                if ($tipoOperacion === 'entradas') {
+                    $reglasBase['factura_boleta'] = 'nullable|string|max:100';
+                    $reglasBase['proveedor'] = 'nullable|string|max:100';
+                }
+                // Aquí podrías añadir más reglas específicas si las cabeceras de 'salidas' son diferentes
 
-            // DB::commit(); // Si usaste transacción
+                $validador = Validator::make($data, $reglasBase);
 
-            // Devolver el movimiento creado o un mensaje de éxito
-            return response()->json($movimiento, 201); // 201 Created
+                if ($validador->fails()) {
+                    $erroresDeValidacion["movimiento_{$index}"] = $validador->errors();
+                    continue; // Saltar este movimiento y continuar con el siguiente
+                }
+
+                // Crear el movimiento
+                MovimientoAlmacen::create([ // Asegúrate que este es tu modelo y que los campos coinciden
+                    'fk_insumos' => $insumoId,
+                    'almacen' => $almacenNombre,
+                    'tipo_movimiento' => $data['tipo_movimiento'], // 'entrada' o 'salida'
+                    'fecha' => $data['fecha'],
+                    'cant_movida' => $data['cant_movida'],
+                    'factura_boleta' => $data['factura_boleta'] ?? null,
+                    'observacion' => $data['observacion'],
+                    'lote' => $data['lote'],
+                    'proveedor' => $data['proveedor'] ?? null,
+                    // ...otros campos que necesites: usuario_id, etc.
+                ]);
+                // Nota: El cálculo de stock se omitió aquí, se recalculará al llamar a fetchMovimientos.
+            }
+
+            if (!empty($erroresDeValidacion)) {
+                DB::rollBack(); // Revertir si hubo errores
+                return response()->json([
+                    'message' => 'Algunos movimientos no pasaron la validación.',
+                    'errors' => $erroresDeValidacion
+                ], 422);
+            }
+
+            DB::commit(); // Confirmar transacción si todo OK
+            return response()->json(['message' => 'Movimiento(s) guardado(s) con éxito.'], 201);
 
         } catch (\Exception $e) {
-            // DB::rollBack(); // Si usaste transacción
-            return response()->json(['message' => 'Error al crear el movimiento', 'error' => $e->getMessage()], 500);
+            DB::rollBack();
+            Log::error("API [store Movimiento]: Error al guardar:", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['message' => 'Error interno al guardar los movimientos.', 'error_detail' => $e->getMessage()], 500);
         }
     }
 
     public function updateMovimiento(Request $request, $movimientoId)
     {
-        $movimiento = Movimiento::find($movimientoId);
+        Log::info('Entrado al metodo updateMovimietno 1.');
+        $movimiento = MovimientoAlmacen::find($movimientoId);
         if (!$movimiento) {
+            Log::info('No se encontró el movimiento con su id .', ['movimientoId' => $movimientoId]);
             return response()->json(['message' => 'Movimiento no encontrado'], 404);
         }
 
-        // --- Validación (similar a store, pero adaptada para update) ---
-         $validator = Validator::make($request->all(), [
-            'insumo_id' => 'required|exists:insumos,id',
-            'almacen' => 'required|string|max:100',
-            'fecha' => 'required|date',
-            'tipo_movimiento' => 'required|in:entrada,salida',
-            'cant_movida' => 'required|numeric|min:0',
-            'lote' => 'nullable|string|max:100',
-            'observacion' => 'nullable|string|max:255',
-             // Otros campos...
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        $insumoActual = Insumos::find($movimiento->fk_insumos); // Necesitas el insumo_id del movimiento
+        $loteRequerido = false;
+        if ($insumoActual && ($insumoActual->control_cebado === 'Y') && $movimiento->tipo_movimiento === 'entrada') {
+            $loteRequerido = true;
         }
 
+        $reglas = [
+            'fecha' => 'required|date',
+            'cant_movida' => 'required|numeric|min:0.01',
+            'observacion' => ($movimiento->tipo_movimiento === 'entrada') ? 'required|string|max:255' : 'nullable|string|max:255', // Ajusta si es obligatorio para salidas también
+            'lote' => $loteRequerido ? 'required|string|max:100' : 'nullable|string|max:100',
+        ];
+
+        if ($movimiento->tipo_movimiento === 'entrada') {
+            $reglas['factura_boleta'] = 'nullable|string|max:100';
+            $reglas['proveedor'] = 'nullable|string|max:100';
+        }
+
+        $validador = Validator::make($request->all(), $reglas);
+
+        if ($validador->fails()) {
+            return response()->json(['message' => 'Datos de entrada inválidos.', 'errors' => $validador->errors()], 422);
+        }
+
+        $datosParaActualizar = $validador->validated();
+
+
+        
         // --- Actualización ---
         // DB::beginTransaction();
         try {
-            $movimiento->update($validator->validated());
+
+            Log::info('Se entro al try de la actualizacion');
+            
+            $movimiento->update($datosParaActualizar);
+           
+
+            Log::info('Se entro al try de la actualizacion 2');
 
             // --- Recalcular Stock (Opcional - Simplificado) ---
 
             // DB::commit();
 
-            return response()->json($movimiento); // Devuelve el movimiento actualizado
+            return response()->json(['message' => 'Movimiento actualizado con éxito.', 'movimiento' => $movimiento]);
 
         } catch (\Exception $e) {
+            Log::info('Se vio un error en el try de la actualizacion', ['error' => $e->getMessage()]);
             // DB::rollBack();
             return response()->json(['message' => 'Error al actualizar el movimiento', 'error' => $e->getMessage()], 500);
         }

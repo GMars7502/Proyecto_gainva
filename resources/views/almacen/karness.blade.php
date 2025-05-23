@@ -238,10 +238,236 @@
         <?php   
         #region 🧩Crear
         ?>
-        {{-- Modal para Crear Movimiento --}}
-        {{-- <div x-show="showCreateModal">...</div> --}}
-        {{-- Modal para Editar Movimiento --}}
-        {{-- <div x-show="showEditModal">...</div> --}}
+
+            <div x-show="showCreateModal"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-90"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-90"
+                @keydown.escape.window="closeCreateModal()"
+                class="fixed inset-0 z-40 overflow-y-auto p-4 bg-gray-900 bg-opacity-60 flex items-center justify-center"
+                style="display: none;">
+
+            <div @click.outside="closeCreateModal()" class="bg-blue-900 text-white rounded-lg shadow-xl w-full max-w-xl sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
+
+                {{-- Encabezado del Modal --}}
+                <div class="flex justify-between items-center p-4 sm:p-5 border-b border-blue-700">
+                    <h3 class="text-lg sm:text-xl font-semibold">Creación de Movimiento</h3>
+                    <button @click="closeCreateModal()" class="text-blue-300 hover:text-white transition text-2xl">&times;</button>
+                </div>
+
+                {{-- Pestañas de Navegación --}}
+                <div class="flex border-b border-blue-700">
+                    <button @click="switchCreateTab('salidas')"
+                            :class="{ 'bg-green-500 text-white font-bold': createModalTab === 'salidas', 'bg-blue-800 hover:bg-blue-700 text-blue-300': createModalTab !== 'salidas' }"
+                            class="flex-1 py-2.5 sm:py-3 px-4 text-sm sm:text-base focus:outline-none transition">
+                        Salidas
+                    </button>
+                    <button @click="switchCreateTab('entradas')"
+                            :class="{ 'bg-green-500 text-white font-bold': createModalTab === 'entradas', 'bg-blue-800 hover:bg-blue-700 text-blue-300': createModalTab !== 'entradas' }"
+                            class="flex-1 py-2.5 sm:py-3 px-4 text-sm sm:text-base focus:outline-none transition">
+                        Entradas
+                    </button>
+                </div>
+
+                {{-- Contenido de las Pestañas (overflow para el contenido interno) --}}
+                <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-grow">
+
+                    {{-- ***** Pestaña de SALIDAS ***** --}}
+                    <div x-show="createModalTab === 'salidas'" class="space-y-3">
+                        <template x-for="(salida, index) in newSalidas" :key="salida.id">
+                            <div class="p-3 bg-blue-800 rounded-md shadow grid grid-cols-1 sm:grid-cols-10 gap-2 items-end">
+                                {{-- Fecha --}}
+                                <div class="sm:col-span-2">
+                                    <label :for="'salida_fecha_'+index" class="block text-xs text-blue-300 mb-1">Fecha</label>
+                                    <input type="date" :id="'salida_fecha_'+index" x-model="salida.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                {{-- Cantidad Saca --}}
+                                <div class="sm:col-span-2">
+                                    <label :for="'salida_cant_'+index" class="block text-xs text-blue-300 mb-1">Cant. Saca</label>
+                                    <input type="number" :id="'salida_cant_'+index" x-model.number="salida.cantSaca" placeholder="0" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                {{-- Lote --}}
+                                <div class="sm:col-span-2">
+                                    <label :for="'salida_lote_'+index" class="block text-xs text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEntrada()" class="text-red-400">*</span></label>
+                                    <input type="text" :id="'salida_lote_'+index" x-model="salida.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                {{-- Observación --}}
+                                <div class="sm:col-span-3">
+                                    <label :for="'salida_obs_'+index" class="block text-xs text-blue-300 mb-1">Observ.</label>
+                                    <input type="text" :id="'salida_obs_'+index" x-model="salida.observacion" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                {{-- Botón Eliminar Fila --}}
+                                <div class="sm:col-span-1 flex items-end justify-end sm:justify-center">
+                                    <button @click="removeSalidaRow(index)" title="Eliminar esta fila"
+                                            class="p-1.5 bg-red-600 hover:bg-red-500 rounded-md text-white"
+                                            x-show="newSalidas.length > 0"> {{-- No mostrar si es la única y quieres que siempre haya al menos una (ajusta esta lógica) --}}
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Botón Añadir Fila de Salida --}}
+                        <div class="text-right pt-1" x-show="newSalidas.length < MAX_SALIDAS">
+                            <button @click="addSalidaRow()"
+                                    class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium rounded-md shadow transition">
+                                <i class="fas fa-plus mr-1"></i> Añadir Fila Salida
+                            </button>
+                        </div>
+                        <p x-show="newSalidas.length >= MAX_SALIDAS" class="text-xs text-center text-yellow-400">Límite de 10 salidas alcanzado.</p>
+                    </div>
+
+                    {{-- ***** Pestaña de ENTRADAS ***** --}}
+                    <div x-show="createModalTab === 'entradas'" class="space-y-3">
+                        {{-- Fecha --}}
+                        <div>
+                            <label for="entrada_fecha" class="block text-sm text-blue-300 mb-1">Fecha <span class="text-red-400">*</span></label>
+                            <input type="date" id="entrada_fecha" x-model="newEntrada.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                        {{-- Cantidad Entrada --}}
+                        <div>
+                            <label for="entrada_cant" class="block text-sm text-blue-300 mb-1">Cant. Entrada <span class="text-red-400">*</span></label>
+                            <input type="number" id="entrada_cant" x-model.number="newEntrada.cantEntrada" placeholder="0" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                        {{-- Factura/Boleta --}}
+                        <div>
+                            <label for="entrada_factura" class="block text-sm text-blue-300 mb-1">Factura/Boleta</label>
+                            <input type="text" id="entrada_factura" x-model="newEntrada.factura" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                        {{-- Observación --}}
+                        <div>
+                            <label for="entrada_obs" class="block text-sm text-blue-300 mb-1">Observación <span class="text-red-400">*</span></label>
+                            <input type="text" id="entrada_obs" x-model="newEntrada.observacion" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                        {{-- Lote --}}
+                        <div>
+                            <label for="entrada_lote" class="block text-sm text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEntrada()" class="text-red-400">*</span></label>
+                            <input type="text" id="entrada_lote" x-model="newEntrada.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                        {{-- Proveedor --}}
+                        <div>
+                            <label for="entrada_proveedor" class="block text-sm text-blue-300 mb-1">Proveedor</label>
+                            <input type="text" id="entrada_proveedor" x-model="newEntrada.proveedor" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Pie del Modal (Botones Guardar/Cancelar) --}}
+                <div class="flex justify-end p-4 sm:p-5 space-x-3 border-t border-blue-700">
+                    <button @click="closeCreateModal()"
+                            :disabled="isSavingMovement"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition text-sm font-medium disabled:opacity-70">
+                        Cancelar
+                    </button>
+                    <button @click="saveMovements()"
+                            :disabled="isSavingMovement"
+                            class="inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 transition text-sm font-medium disabled:opacity-70 disabled:bg-green-400">
+                        <i x-show="isSavingMovement" class="fas fa-spinner fa-spin -ml-1 mr-2 h-4 w-4"></i>
+                        <span x-text="isSavingMovement ? 'Guardando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <?php   
+        #region 🧩Editar
+        ?>
+
+
+        <div x-show="showEditModal"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-90"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-90"
+            @keydown.escape.window="closeEditModal()"
+            class="fixed inset-0 z-40 overflow-y-auto p-4 bg-gray-900 bg-opacity-60 flex items-center justify-center"
+            style="display: none;">
+
+            <div @click.outside="closeEditModal()" class="bg-blue-900 text-white rounded-lg shadow-xl w-full max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
+
+                {{-- Encabezado del Modal --}}
+                <div class="flex justify-between items-center p-4 sm:p-5 border-b border-blue-700">
+                    <h3 class="text-lg sm:text-xl font-semibold">
+                        Editar Movimiento (<span x-text="editingMovementData.tipo_movimiento" class="capitalize"></span>)
+                    </h3>
+                    <button @click="closeEditModal()" class="text-blue-300 hover:text-white transition text-2xl">&times;</button>
+                </div>
+
+                {{-- Contenido del Formulario (overflow para el contenido interno) --}}
+                <div class="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto flex-grow">
+                    {{-- ID del Movimiento (solo informativo, no editable) --}}
+                    <p class="text-xs text-blue-400">Editando Movimiento ID: <span x-text="editingMovementData.idMovimiento"></span></p>
+
+                    {{-- Fecha --}}
+                    <div>
+                        <label for="edit_fecha" class="block text-sm text-blue-300 mb-1">Fecha <span class="text-red-400">*</span></label>
+                        <input type="date" id="edit_fecha" x-model="editingMovementData.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+
+                    {{-- Cantidad Movida --}}
+                    <div>
+                        <label for="edit_cant_movida" class="block text-sm text-blue-300 mb-1">Cantidad <span class="text-red-400">*</span></label>
+                        <input type="number" id="edit_cant_movida" x-model.number="editingMovementData.cant_movida" placeholder="0" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+
+                    {{-- Observación --}}
+                    <div>
+                        <label for="edit_observacion" class="block text-sm text-blue-300 mb-1">
+                            Observación <span x-show="editingMovementData.tipo_movimiento === 'entrada'" class="text-red-400">*</span> {{-- Solo obligatorio para entradas (ejemplo) --}}
+                        </label>
+                        <input type="text" id="edit_observacion" x-model="editingMovementData.observacion" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+
+                    {{-- Lote --}}
+                    <div>
+                        <label for="edit_lote" class="block text-sm text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEdit()" class="text-red-400">*</span></label>
+                        <input type="text" id="edit_lote" x-model="editingMovementData.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+
+                    {{-- Campos específicos para ENTRADAS --}}
+                    <template x-if="editingMovementData.tipo_movimiento === 'entrada'">
+                        <div class="space-y-3 sm:space-y-4 pt-2 border-t border-blue-700 mt-3 sm:mt-4">
+                            <div>
+                                <label for="edit_factura_boleta" class="block text-sm text-blue-300 mb-1">Factura/Boleta</label>
+                                <input type="text" id="edit_factura_boleta" x-model="editingMovementData.factura_boleta" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                            </div>
+                            <div>
+                                <label for="edit_proveedor" class="block text-sm text-blue-300 mb-1">Proveedor</label>
+                                <input type="text" id="edit_proveedor" x-model="editingMovementData.proveedor" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Pie del Modal (Botones Guardar/Cancelar) --}}
+                <div class="flex justify-end p-4 sm:p-5 space-x-3 border-t border-blue-700">
+                    <button @click="closeEditModal()"
+                            :disabled="isUpdatingMovement"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition text-sm font-medium disabled:opacity-70">
+                        Cancelar
+                    </button>
+                    <button @click="updateMovement()"
+                            :disabled="isUpdatingMovement"
+                            class="inline-flex items-center justify-center px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-opacity-50 transition text-sm font-medium disabled:opacity-70 disabled:bg-orange-300">
+                        <i x-show="isUpdatingMovement" class="fas fa-spinner fa-spin -ml-1 mr-2 h-4 w-4"></i>
+                        <span x-text="isUpdatingMovement ? 'Actualizando...' : 'Guardar Cambios'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        
+
+
+
         {{-- Modal para Ver Movimiento --}}
         {{-- <div x-show="showViewModal">...</div> --}}
 
@@ -259,7 +485,9 @@
         apiEndpoints: {
             getmovimientos: '/movimiento_almacen/get-movimientos/{$insumoId}',
             deletemovimiento: '/movimiento_almacen/{movimientoid}',
-        }
+            createMovimiento: '/movimiento_almacen/store-movimiento',
+             updateMovimiento: '/movimiento_almacen/update-movimiento/{movimientoid}', 
+            }
     };
     </script>
 </x-app-layout>
