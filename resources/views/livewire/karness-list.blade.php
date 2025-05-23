@@ -1,6 +1,3 @@
-
-
-
 <div class="container mx-auto p-6 space-y-6">
 
     <!-- Selector de almacén -->
@@ -21,7 +18,7 @@
                 <ul class="mt-3 space-y-1">
                     @foreach ($kar->insumos as $insumo)
                         <li>
-                            <a href="{{ route('almacen.karness', ['id' => $insumo->idInsumo, 'almacen' => $inventario]) }}" class="block text-sm opacity-80 hover:opacity-100 hover:text-yellow-300 transition">
+                            <a href="{{ route('almacen.karness', ['insumoId' => $insumo->idInsumo, 'almacen' => $inventario]) }}" class="block text-sm opacity-80 hover:opacity-100 hover:text-yellow-300 transition">
                                 {{ $insumo->Nombre }}
                             </a>
                         </li>

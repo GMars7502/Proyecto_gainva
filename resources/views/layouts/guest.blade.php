@@ -16,7 +16,7 @@
 
     <style>
         body {
-            background-image: url('storage/Hospital.jpg');
+            background-image: url('assets/images/Hospital.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -27,7 +27,7 @@
     <div class="min-h-screen flex items-center justify-center bg-black bg-opacity-50">
         <div class="w-full max-w-md bg-white bg-opacity-95 rounded-xl shadow-xl p-6">
             <div class="flex justify-center mb-4">
-                <img src="{{ asset('storage/logo.jpg') }}" alt="Logo" class="w-32 h-32 rounded-full object-cover">
+                <img src="{{ asset('assets/images/logo.jpg') }}" alt="Logo" class="w-32 h-32 rounded-full object-cover">
             </div>
 
             {{ $slot }}

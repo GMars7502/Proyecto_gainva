@@ -1,6 +1,6 @@
 <aside class="w-64 bg-green-900 text-white min-h-screen flex flex-col">
     <div class="flex items-center justify-center h-20 border-b border-green-700">
-        <img src="{{ asset('storage/logo.jpg') }}" alt="Logo" class="h-12">
+        <img src="{{ asset('assets/images/logo.jpg') }}" alt="Logo" class="h-12">
     </div>
     <nav class="flex-1 px-4 py-2 space-y-2">
         <a href="{{ route('dashboard') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('dashboard') ? 'bg-green-800' : '' }}">
