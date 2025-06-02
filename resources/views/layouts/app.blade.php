@@ -3,10 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    
+    <title>
+        {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Asegúrate de que LivewireStyles esté aquí si usas Livewire en tu dashboard --}}
     @livewireStyles
+
+    <link rel="icon" href="{{ asset('assets/images/ico_logo.ico') }}" type="image/x-icon">
 </head>
 <body class="flex bg-gray-100 min-h-screen text-gray-900">
     <x-sidebar />
@@ -22,7 +26,7 @@
                 @else
                     {{-- Este es un título de respaldo si no se define un slot $header --}}
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                        {{ __('Dashboard Prueba') }} {{-- Coincide con tu imagen --}}
+                        {{ __('Dashboard Prueba - tomar tu prueba') }} {{-- Coincide con tu imagen --}}
                     </h2>
                 @endif
 

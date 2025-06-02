@@ -22,11 +22,11 @@ class AlmacenController extends Controller
     public function index()
     {
         $karness = Karness::with('insumos')->orderBy('idkarness')->get();
-        $insumos = Insumos::all();
+        $ListInsumos = Insumos::all();
 
 
 
-        return view('almacen.index', compact('karness'));
+        return view('almacen.index', compact('karness','ListInsumos'));
     }
 
 
@@ -53,10 +53,6 @@ class AlmacenController extends Controller
         }
 
         $listaInsumos = $query->orderBy('idInsumo')->get();
-
-
-
-            //return $listaInsumos;
 
            return view('almacen.karness', compact('almacen','insumoId','listaInsumos'));
 

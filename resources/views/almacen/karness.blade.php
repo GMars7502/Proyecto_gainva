@@ -1,5 +1,35 @@
 {{-- resources/views/almacen/karness.blade.php --}}
 <x-app-layout>
+
+
+    @if (session('success'))
+        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 1500)" x-show="show"
+            class="bg-green-500 text-white p-3 rounded-md mb-4">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 1500)" x-show="show"
+            class="bg-red-500 text-white p-3 rounded-md mb-4">
+            {{ session('error') }}
+        </div>
+    @endif
+    <x-slot name="header">
+        <h1 class="text-xl font-semibold text-gray-800">Gestión Almacen / Karness</h1>
+    </x-slot>
+
+
+
+
+
+
+
+
+
+
+
+
 <div x-data="karnessRegistro(window.karnessConfig)"
          x-init="init()"
          class="container mx-auto px-6 py-10 space-y-10 text-gray-800" {{-- Contenedor principal y espaciado --}}
@@ -47,6 +77,10 @@
         </div>
 
         <?php   
+        #endregion
+        ?>
+
+        <?php   
         #region BarraNavega 
         ?>
         {{-- 2. Barra de Navegación de Insumos --}}
@@ -64,9 +98,22 @@
                     <div x-show="!insumoAnterior" class="w-full h-full"></div> {{-- Placeholder para mantener espacio --}}
                 </div>
 
-                {{-- Nombre del Insumo Actual --}}
-                <div class="min-w-full sm:min-w-[14rem] md:min-w-[16rem] text-center bg-blue-800 px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-md font-bold text-sm sm:text-base md:text-lg truncate h-[calc(2.75rem+2px)] sm:h-[calc(3rem+2px)] flex items-center justify-center">
-                     <span x-text="insumoActual ? insumoActual.Nombre : (insumoId ? 'Cargando...' : 'Seleccione Insumo')"></span>
+                {{-- Insumo Actual - AHORA COMO SELECT DESPLEGABLE --}}
+                <div class="min-w-full sm:min-w-[14rem] md:min-w-[16rem] relative h-[calc(2.75rem+2px)] sm:h-[calc(3rem+2px)] flex items-center justify-center">
+                    <select
+                        @change="navigateToInsumo($event.target.value)"
+                        :disabled="isLoadingTable"
+                        class="w-full appearance-none text-center bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-md font-bold text-sm sm:text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 cursor-pointer"
+                        aria-label="Seleccionar Insumo"
+                    >
+                        <template x-for="insumo in insumoList" :key="insumo.idInsumo">
+                            <option
+                                :value="insumo.idInsumo"
+                                x-text="insumo.Nombre"
+                                :selected="insumo.idInsumo === insumoId"
+                            ></option>
+                        </template>
+                    </select>
                 </div>
 
                 {{-- Botón Siguiente --}}
@@ -84,6 +131,10 @@
         </div>
 
         <?php   
+        #endregion
+        ?>
+
+        <?php   
         #region CrearMovi 
         ?>
 
@@ -93,6 +144,10 @@
                 <i class="fas fa-plus mr-2"></i> Crear Movimiento
             </button>
         </div>
+
+        <?php   
+        #endregion
+        ?>
 
 
         <?php   
@@ -110,7 +165,7 @@
             <h2 class="text-xl sm:text-2xl font-semibold text-center mb-4">
                  Movimientos: <span x-text="almacen"></span> - <span x-text="insumoActual ? insumoActual.Nombre : 'Insumo'"></span>
             </h2>
-            <p class="text-center text-sm text-blue-300 mb-4">Año: <span x-text="selectedYear"></span>, Mes: <span x-text="selectedMonth"></span></p>
+            <p class="text-center text-sm text-blue-300 mb-4">Año: <span x-text="selectedYear"></span>, Mes: <span x-text="selectedMonth"></span>,  Total en Stock: <span x-text="totalStock"></span></p>
 
 
             <div class="overflow-x-auto">
@@ -120,7 +175,6 @@
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold">Fecha</th>
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold">Tipo</th>
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold text-center">Cantidad</th>
-                            <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold text-center">Stock</th>
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold">Observación</th>
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold">Lote</th>
                             <th class="py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm uppercase font-semibold text-center">Acciones</th>
@@ -136,7 +190,7 @@
                         </template>
                          <template x-for="movimiento in movimientos" :key="movimiento.idMovimiento"> {{-- Usa tu PK aquí --}}
                             <tr class="bg-blue-800 hover:bg-blue-700 transition-colors text-xs sm:text-sm">
-                                <td class="py-2 px-3 sm:px-4" x-text="formatDate(movimiento.fecha)"></td>
+                                <td class="py-2 px-3 sm:px-4" x-text="movimiento.fecha"></td>
                                 <td class="py-2 px-3 sm:px-4" x-text="movimiento.tipo_movimiento"></td>
                                 <td class="py-2 px-3 sm:px-4 text-center"
                                     :class="{
@@ -145,7 +199,6 @@
                                     }"
                                     x-text="movimiento.cant_movida">
                                 </td>
-                                <td class="py-2 px-3 sm:px-4 text-center font-medium" x-text="movimiento.stock"></td>
                                 <td class="py-2 px-3 sm:px-4 truncate max-w-xs" :title="movimiento.observacion" x-text="movimiento.observacion || '-'"></td>
                                 <td class="py-2 px-3 sm:px-4" x-text="movimiento.lote || '-'"></td>
                                 <td class="py-2 px-3 sm:px-4 text-center">
@@ -156,9 +209,6 @@
                                         <button @click="confirmDelete(movimiento.idMovimiento)" title="Eliminar" class="p-1 sm:p-1.5 text-red-500 hover:text-red-400 transition duration-150">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm2 4a1 1 0 100 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>
                                         </button>
-                                        <button @click="openViewModal(movimiento)" title="Ver Detalles" class="p-1 sm:p-1.5 text-blue-400 hover:text-blue-300 transition duration-150">
-                                             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zm15.083-1a14.914 14.914 0 00-2.531-3.145A15.008 15.008 0 0010 5c-1.84 0-3.58.46-5.052 1.287A14.913 14.913 0 002.469 9a14.914 14.914 0 002.531 3.145A15.008 15.008 0 0010 13c1.84 0 3.58-.46 5.052-1.287A14.913 14.913 0 0017.531 9a14.914 14.914 0 00-.99-1z" clip-rule="evenodd"></path></svg>
-                                         </button>
                                     </div>
                                 </td>
                             </tr>
@@ -166,9 +216,25 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="text-right mt-6 mb-2">
+            <button @click="openCreateModal()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow hover:shadow-md transition text-sm font-semibold">
+                <i class="fas fa-plus mr-2"></i> Crear Movimiento
+            </button>
+            </div>
+
         </div>
         <?php   
+        #endregion
+        ?>
+
+
+        <?php   
         #region Modales 
+        ?>
+
+        <?php   
+        #endregion
         ?>
 
 
@@ -232,7 +298,9 @@
             </div>
         </div>
 
-
+        <?php   
+        #endregion
+        ?>
 
 
         <?php   
@@ -282,7 +350,9 @@
                                 {{-- Fecha --}}
                                 <div class="sm:col-span-2">
                                     <label :for="'salida_fecha_'+index" class="block text-xs text-blue-300 mb-1">Fecha</label>
-                                    <input type="date" :id="'salida_fecha_'+index" x-model="salida.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                    <input type="date" :id="'salida_fecha_'+index" x-model="salida.fecha" 
+                                    :min="minDateForCurrentMonth" :max="maxDateForCurrentMonth"
+                                    class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
                                 </div>
                                 {{-- Cantidad Saca --}}
                                 <div class="sm:col-span-2">
@@ -291,13 +361,62 @@
                                 </div>
                                 {{-- Lote --}}
                                 <div class="sm:col-span-2">
-                                    <label :for="'salida_lote_'+index" class="block text-xs text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEntrada()" class="text-red-400">*</span></label>
-                                    <input type="text" :id="'salida_lote_'+index" x-model="salida.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                    <label :for="'salida_lote_'+index" class="block text-xs text-blue-300 mb-1">
+                                        Lote <span x-show="isLoteRequiredForEntrada()" class="text-red-400">*</span>
+                                    </label>
+
+                                    {{-- Mostrar SELECT si el lote es mandatorio y hay lotes disponibles --}}
+                                    <template x-if="isLoteRequiredForEntrada() && lotesDisponiblesParaSalida().length > 0">
+                                        <select :id="'salida_lote_select_'+index"
+                                                x-model="salida.lote"
+                                                class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500 appearance-none">
+                                            <option value="">Seleccione un lote...</option>
+                                            <template x-for="item in lotesDisponiblesParaSalida()" :key="item.lote">
+                                                <option :value="item.lote" x-text="`${item.lote} (Disp: ${item.stock})`"></option>
+                                            </template>
+                                        </select>
+                                    </template>
+
+                                    {{-- Mostrar INPUT TEXT si el lote es mandatorio PERO NO hay lotes cargados/disponibles (caso fallback o error) --}}
+                                    <template x-if="isLoteRequiredForEntrada() && lotesDisponiblesParaSalida().length === 0">
+                                        <input type="text" :id="'salida_lote_input_'+index"
+                                            x-model="salida.lote"
+                                            placeholder="Lote requerido"
+                                            class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500 placeholder-blue-400">
+                                        {{-- También podrías mostrar un mensaje como "No hay lotes con stock" --}}
+                                        <p class="text-xxs text-yellow-400 mt-0.5" x-show="stockPorLoteData && stockPorLoteData.length > 0 && lotesDisponiblesParaSalida().length === 0">No hay lotes con stock positivo.</p>
+                                        <p class="text-xxs text-yellow-400 mt-0.5" x-show="!stockPorLoteData || stockPorLoteData.length === 0">Info de lotes no disponible.</p>
+
+                                    </template>
+
+                                    {{-- Mostrar INPUT TEXT si el lote NO es mandatorio para el insumo --}}
+                                    <template x-if="!isLoteRequiredForEntrada()">
+                                        {{-- No se puede ni escribir ni seleccionar. Mostramos un input deshabilitado o un texto. --}}
+                                        <input type="text" :id="'salida_lote_na_'+index"
+                                            placeholder="N/A (Sin control de lote)" {{-- Placeholder para indicar por qué está deshabilitado --}}
+                                            x-init="$el.value = salida.lote = ''" {{-- Forzar a vacío y limpiar el modelo --}}
+                                            disabled
+                                            class="w-full bg-blue-800 border-blue-700 text-blue-500 rounded-md p-1.5 text-xs cursor-not-allowed italic">
+                                        {{-- O podrías simplemente no renderizar ningún input y asegurar que 'salida.lote' sea null/vacío en el JS --}}
+                                        {{-- Ejemplo: <p class="p-1.5 text-xs text-blue-500 italic">N/A (Sin control de lote)</p> --}}
+                                    </template>
                                 </div>
                                 {{-- Observación --}}
                                 <div class="sm:col-span-3">
                                     <label :for="'salida_obs_'+index" class="block text-xs text-blue-300 mb-1">Observ.</label>
-                                    <input type="text" :id="'salida_obs_'+index" x-model="salida.observacion" class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                    <input type="text"
+                                        :id="'salida_obs_'+index"
+                                        x-model="salida.observacion"
+                                        :list="'salida_obs_options_datalist_'+index" {{-- Atributo list que apunta al ID del datalist --}}
+                                        placeholder="Escriba o seleccione una opción"
+                                        class="w-full bg-blue-700 border-blue-600 rounded-md p-1.5 text-xs focus:ring-cyan-500 focus:border-cyan-500">
+                                    <datalist :id="'salida_obs_options_datalist_'+index"> {{-- Datalist con opciones dinámicas --}}
+                                        {{-- Iteramos sobre las opciones generadas por la nueva función getSalidaObservationOptions --}}
+                                        {{-- Pasamos la fecha de la salida actual para generar la opción de fecha dinámica --}}
+                                        <template x-for="option in getSalidaObservationOptions(salida.fecha)" :key="option">
+                                            <option :value="option" x-text="option"></option>
+                                        </template>
+                                    </datalist>
                                 </div>
                                 {{-- Botón Eliminar Fila --}}
                                 <div class="sm:col-span-1 flex items-end justify-end sm:justify-center">
@@ -317,7 +436,7 @@
                                 <i class="fas fa-plus mr-1"></i> Añadir Fila Salida
                             </button>
                         </div>
-                        <p x-show="newSalidas.length >= MAX_SALIDAS" class="text-xs text-center text-yellow-400">Límite de 10 salidas alcanzado.</p>
+                        <p x-show="newSalidas.length >= MAX_SALIDAS" class="text-xs text-center text-yellow-400">Límite de 5 salidas alcanzado.</p>
                     </div>
 
                     {{-- ***** Pestaña de ENTRADAS ***** --}}
@@ -325,7 +444,9 @@
                         {{-- Fecha --}}
                         <div>
                             <label for="entrada_fecha" class="block text-sm text-blue-300 mb-1">Fecha <span class="text-red-400">*</span></label>
-                            <input type="date" id="entrada_fecha" x-model="newEntrada.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                            <input type="date" id="entrada_fecha" x-model="newEntrada.fecha" 
+                            :min="minDateForCurrentMonth" :max="maxDateForCurrentMonth"
+                            class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
                         </div>
                         {{-- Cantidad Entrada --}}
                         <div>
@@ -335,7 +456,7 @@
                         {{-- Factura/Boleta --}}
                         <div>
                             <label for="entrada_factura" class="block text-sm text-blue-300 mb-1">Factura/Boleta</label>
-                            <input type="text" id="entrada_factura" x-model="newEntrada.factura" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                            <input type="text" id="entrada_factura" x-model="newEntrada.factu_o_boleta" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
                         </div>
                         {{-- Observación --}}
                         <div>
@@ -344,8 +465,35 @@
                         </div>
                         {{-- Lote --}}
                         <div>
-                            <label for="entrada_lote" class="block text-sm text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEntrada()" class="text-red-400">*</span></label>
-                            <input type="text" id="entrada_lote" x-model="newEntrada.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                            <template x-if="isLoteRequiredForEntrada()">
+                            <div>
+                                <label for="entrada_lote_input" class="block text-sm text-blue-300 mb-1">
+                                    Lote <span class="text-red-400">*</span> {{-- El asterisco solo si es mandatorio --}}
+                                </label>
+
+                                <input type="text"
+                                    id="entrada_lote_input"
+                                    x-model="newEntrada.lote"
+                                    list="lotes_existentes_para_entrada_datalist" {{-- Vincula al datalist --}}
+                                    placeholder="Seleccione o ingrese nuevo lote"
+                                    class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+
+                                {{-- Datalist con TODOS los lotes existentes de stockPorLoteData para este insumo/almacén/periodo --}}
+                                <datalist id="lotes_existentes_para_entrada_datalist">
+                                    {{-- Iteramos sobre stockPorLoteData directamente, que tiene todos los lotes del mes/año actual para el insumo --}}
+                                    {{-- Asegúrate que stockPorLoteData contenga objetos con 'lote' y 'stock_consolidado' --}}
+                                    <template x-for="itemLote in stockPorLoteData.filter(sl => sl.lote)" :key="itemLote.lote + '_entrada_dl_option'">
+                                        <option :value="itemLote.lote"
+                                                x-text="itemLote.lote + (itemLote.stock_consolidado !== undefined ? ` (Stock: ${itemLote.stock_consolidado})` : '')">
+                                        </option>
+                                    </template>
+                                </datalist>
+
+                                <p class="text-xxs text-blue-400 mt-0.5">
+                                    Seleccione un lote de la lista o escriba uno nuevo. Requerido para este insumo.
+                                </p>
+                                </div>
+                            </template>
                         </div>
                         {{-- Proveedor --}}
                         <div>
@@ -371,6 +519,10 @@
                 </div>
             </div>
         </div>
+
+        <?php   
+        #endregion
+        ?>
 
         <?php   
         #region 🧩Editar
@@ -406,7 +558,9 @@
                     {{-- Fecha --}}
                     <div>
                         <label for="edit_fecha" class="block text-sm text-blue-300 mb-1">Fecha <span class="text-red-400">*</span></label>
-                        <input type="date" id="edit_fecha" x-model="editingMovementData.fecha" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        <input type="date" id="edit_fecha" x-model="editingMovementData.fecha" 
+                        :min="minDateForCurrentMonth" :max="maxDateForCurrentMonth"
+                        class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
                     </div>
 
                     {{-- Cantidad Movida --}}
@@ -424,17 +578,19 @@
                     </div>
 
                     {{-- Lote --}}
-                    <div>
-                        <label for="edit_lote" class="block text-sm text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEdit()" class="text-red-400">*</span></label>
-                        <input type="text" id="edit_lote" x-model="editingMovementData.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
-                    </div>
+                    <template x-if="isLoteRequiredForEntrada()">
+                        <div>
+                            <label for="edit_lote" class="block text-sm text-blue-300 mb-1">Lote <span x-show="isLoteRequiredForEdit()" class="text-red-400">*</span></label>
+                            <input type="text" id="edit_lote" x-model="editingMovementData.lote" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        </div>
+                    </template>
 
                     {{-- Campos específicos para ENTRADAS --}}
                     <template x-if="editingMovementData.tipo_movimiento === 'entrada'">
                         <div class="space-y-3 sm:space-y-4 pt-2 border-t border-blue-700 mt-3 sm:mt-4">
                             <div>
                                 <label for="edit_factura_boleta" class="block text-sm text-blue-300 mb-1">Factura/Boleta</label>
-                                <input type="text" id="edit_factura_boleta" x-model="editingMovementData.factura_boleta" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                                <input type="text" id="edit_factura_boleta" x-model="editingMovementData.factu_o_boleta" class="w-full bg-blue-700 border-blue-600 rounded-md p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
                             </div>
                             <div>
                                 <label for="edit_proveedor" class="block text-sm text-blue-300 mb-1">Proveedor</label>
@@ -461,15 +617,15 @@
             </div>
         </div>
 
+        <?php   
+        #endregion
+        ?>
+
 
 
 
         
 
-
-
-        {{-- Modal para Ver Movimiento --}}
-        {{-- <div x-show="showViewModal">...</div> --}}
 
 
     </div>

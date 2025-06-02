@@ -14,8 +14,14 @@
     @endif
     
     <x-slot name="header">
-        <h1 class="text-xl font-semibold text-gray-800">Gestión de Cebado</h1>
+        <h1 class="text-xl font-semibold text-gray-800">Gestión de Permisos</h1>
     </x-slot>
 
-    Hola que tal esto es el control de cebado
+    <div class="py-12">
+
+        <h1>
+            <span class="text-2xl font-bold text-gray-800">Permisos</span>
+        </h1>
+        
+    </div>
 </x-app-layout>

@@ -16,68 +16,141 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
 
+use App\Services\MovimientoService; // <--- Importa tu servicio
+use App\Http\Requests\GetMovimientosRequest; // <--- Ejemplo de Form Request (ver punto 2)
+use App\Http\Requests\StoreMovimientoRequest;
+
 class MovimientoController extends Controller
 {
+
+    protected $movimientoService;
+
+    public function __construct(MovimientoService $movimientoService)
+    {
+        $this->movimientoService = $movimientoService;
+    }
+
+
     public function getMovimientos(Request $request, $insumoId)
     {
-        $validator = Validator::make($request->all(), [
-            'year' => 'required|integer|min:2000|max:' . (date('Y') + 1),
+       $validator = Validator::make($request->all(), [
+            'year' => 'required|integer|min:2000|max:' . (now()->year + 5),
             'month' => 'required|integer|min:1|max:12',
-            //'almacen' => 'required|string|max:100', // pARA AGREGAR FILTRO ALMACEN corresponda
+            'almacen' => 'required|string|max:100',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422); // Unprocessable Entity
+            Log::warning('[getMovimientos] Validación fallida:', $validator->errors()->toArray());
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $year = $request->input('year');
         $month = $request->input('month');
-        //$almacen = $request->input('almacen'); PARA AGREGAR FILTRO POR ALMACEN
+        $almacenNombre = $request->input('almacen');
+
+        $periodoSolicitado = Carbon::create($year, $month, 1)->startOfMonth();
+        Log::info("[getMovimientos] Solicitud para InsumoID: {$insumoId}, Almacen: {$almacenNombre}, Periodo Solicitado: {$periodoSolicitado->toDateString()}");
+
+        $stockPorLoteActual = Almacen::where('idInsumo', $insumoId)
+            ->where('zona', $almacenNombre)
+            ->where('fecha_guardado', $periodoSolicitado) // Compara con la columna 'periodo'
+            ->get();
 
 
-        //$fechaInicio = Carbon::create($year, $month, 1)->startOfMonth();
-        //$fechaFin = Carbon::create($year, $month, 1)->endOfMonth();
+        // 2. Si no hay stock para el período solicitado, intentar arrastrar del anterior
+        if ($periodoSolicitado->equalTo(Carbon::now()->startOfMonth())) { 
+        
+            if ($stockPorLoteActual->isEmpty()) {
+                Log::info("[getMovimientos] No se encontró stock para el periodo solicitado. Intentando arrastre...");
 
-        // --- Cálculo de Stock Inicial para el Mes ---
-        // Suma/resta todas las cantidades movidas ANTES del inicio del mes actual
-        /*
-        $stockInicial = Movimiento::where('insumo_id', $insumoId)
-            ->where('almacen', $almacen) // Filtrar por almacén
-            ->where('fecha', '<', $fechaInicio)
-            ->selectRaw('SUM(CASE WHEN tipo_movimiento = "entrada" THEN cant_movida ELSE -cant_movida END) as balance')
-            ->value('balance') ?? 0; // Si no hay movimientos previos, el stock inicial es 0
+                $periodoFuenteParaArrastre = null;
 
-        */
+                // Buscar último registro en el mismo año, meses anteriores
+                $ultimoRegistroMismoAno = Almacen::where('idInsumo', $insumoId)
+                    ->where('zona', $almacenNombre)
+                    ->where('fecha_guardado', '<', $periodoSolicitado) // Periodos anteriores al solicitado
+                    ->whereYear('fecha_guardado', $year)           // Dentro del mismo año solicitado
+                    ->orderBy('fecha_guardado', 'desc')            // El más reciente
+                    ->first();
 
-        // --- Obtener Movimientos del Mes ---
-        $movimientos = MovimientoAlmacen::where('fk_insumos', $insumoId)
-        ->whereYear('fecha', $year)
-        ->whereMonth('fecha', $month)
-        ->orderBy('fecha', 'asc') // Importante ordenar cronológicamente
-        ->orderBy('idMovimiento', 'asc') // Desempate por ID
-        ->get();
+                if ($ultimoRegistroMismoAno) {
+                    $periodoFuenteParaArrastre = Carbon::parse($ultimoRegistroMismoAno->fecha_guardado)->startOfMonth();
+                    Log::info("[getMovimientos] Periodo fuente para arrastre encontrado en el mismo año: {$periodoFuenteParaArrastre->toDateString()}");
+                } else {
+                    // Si no hay en el mismo año, buscar último registro del año anterior
+                    $ultimoRegistroAnoAnterior = Almacen::where('idInsumo', $insumoId)
+                        ->where('zona', $almacenNombre)
+                        ->whereYear('fecha_guardado', $year - 1) // Del año anterior
+                        ->orderBy('fecha_guardado', 'desc')     // El mes más reciente de ese año anterior
+                        ->first();
 
+                    if ($ultimoRegistroAnoAnterior) {
+                        $periodoFuenteParaArrastre = Carbon::parse($ultimoRegistroAnoAnterior->fecha_guardado)->startOfMonth();
+                        Log::info("[getMovimientos] Periodo fuente para arrastre encontrado en año anterior: {$periodoFuenteParaArrastre->toDateString()}");
+                    }
+                }
 
-        return response()->json($movimientos);
+                // Si encontramos un período fuente, arrastramos los datos
+                if ($periodoFuenteParaArrastre) {
+                    $stockParaArrastrar = Almacen::where('idInsumo', $insumoId)
+                        ->where('zona', $almacenNombre)
+                        ->where('fecha_guardado', $periodoFuenteParaArrastre)
+                        ->get();
 
-        // --- Calcular Stock Acumulado para cada Movimiento ---
-
-        /*
-        $stockActual = $stockInicial;
-        $movimientosConStock = $movimientos->map(function ($movimiento) use (&$stockActual) {
-            if ($movimiento->tipo_movimiento == 'entrada') {
-                $stockActual += $movimiento->cant_movida;
-            } elseif ($movimiento->tipo_movimiento == 'salida') {
-                $stockActual -= $movimiento->cant_movida;
+                    if ($stockParaArrastrar->isNotEmpty()) {
+                        Log::info("[getMovimientos] Arrastrando " . $stockParaArrastrar->count() . " registros de lote desde {$periodoFuenteParaArrastre->toDateString()} hacia {$periodoSolicitado->toDateString()}");
+                        DB::transaction(function () use ($stockParaArrastrar, $insumoId, $almacenNombre, $periodoSolicitado) {
+                            foreach ($stockParaArrastrar as $itemStockAnterior) {
+                                // Usar updateOrCreate para evitar duplicados si esta lógica se ejecuta múltiples veces
+                                // y para asegurar que solo se actualice el stock si ya existe un placeholder.
+                                Almacen::updateOrCreate(
+                                    [ // Atributos para buscar el registro
+                                        'idInsumo'       => $insumoId,
+                                        'zona'            => $almacenNombre,
+                                        'lote'            => $itemStockAnterior->lote, // Arrastrar el lote
+                                        'fecha_guardado'         => $periodoSolicitado,      // Para el NUEVO período
+                                    ],
+                                    [ // Valores para establecer/actualizar
+                                        'cant_stock' => $itemStockAnterior->cant_stock, // Arrastrar el stock
+                                        // Otros campos de tu tabla Almacen que necesiten valor por defecto al crear
+                                    ]
+                                );
+                            }
+                        });
+                        // Después de crear, re-consultamos para obtener los datos del período solicitado
+                        $stockPorLoteActual = Almacen::where('idInsumo', $insumoId)
+                            ->where('zona', $almacenNombre)
+                            ->where('fecha_guardado', $periodoSolicitado)
+                            ->get();
+                        Log::info("[getMovimientos] Stock después del arrastre para el periodo solicitado:", $stockPorLoteActual->toArray());
+                    } else {
+                        Log::info("[getMovimientos] No hay datos de stock en el período fuente ({$periodoFuenteParaArrastre->toDateString()}) para arrastrar.");
+                    }
+                } else {
+                    Log::info("[getMovimientos] No se encontró ningún período fuente para el arrastre de stock.");
+                }
             }
-            // Añadimos el stock *después* de este movimiento como un atributo
-            $movimiento->stock = $stockActual;
-            return $movimiento;
-        });
+        }
 
-        return response()->json($movimientosConStock);
-        */
+        // 3. Obtener Movimientos del Mes (para el período solicitado)
+        $movimientos = MovimientoAlmacen::where('fk_insumos', $insumoId) // Ajusta 'fk_insumos' si es diferente
+                                ->where('almacen', $almacenNombre)
+                                ->whereYear('fecha', $year)
+                                ->whereMonth('fecha', $month)
+                                ->orderBy('fecha', 'asc')
+                                ->orderBy('idMovimiento', 'asc') // Ajusta 'idMovimiento' si es diferente
+                                ->get();
+        Log::info("[getMovimientos] Movimientos del mes encontrados:", $movimientos->toArray());
+
+        return response()->json([
+            'movimientos' => $movimientos,
+            'stockPorLote' => $stockPorLoteActual // Esta variable ahora SIEMPRE contiene el stock del período solicitado
+        ]);
+
     }
+
+
+
 
     public function getNavegacion(Request $request, $insumoId)
     {
@@ -128,141 +201,94 @@ class MovimientoController extends Controller
 
     public function storeMovimiento(Request $request)
     {
-        $tipoOperacion = $request->input('tipo'); // 'entradas' o 'salidas'
-        $insumoId = $request->input('insumo_id');
+        Log::info('Entrado al metodo storeMovimiento 1.');
+        // Validación básica del payload general (podría ir en un FormRequest)
+        $validadorGeneral = Validator::make($request->all(), [
+            'idInsumo' => 'required|integer|exists:insumos', // Asegúrate que 'idInsumo' sea tu PK
+            'almacen' => 'required|string|max:100',
+            'movimientos' => 'required|array|min:1',
+            // Validar que cada item en 'movimientos' tenga 'tipo_movimiento'
+            'movimientos.*.tipo_movimiento' => 'required|in:entrada,salida'
+        ]);
+        
+
+        if ($validadorGeneral->fails()) {
+            Log::info('Fallo la validacion general', ['errors' => $validadorGeneral->errors()]);
+            return response()->json([
+                'message' => 'Datos generales de la solicitud inválidos.',
+                'errors' => $validadorGeneral->errors()
+            ], 422);
+        }
+
+
+        Log::info('Se entrar al try de la validacion general');
+
+        $insumoId = $request->input('idInsumo');
         $almacenNombre = $request->input('almacen');
-        $movimientosData = $request->input('movimientos', []); // Array de movimientos
-
-        if (empty($movimientosData)) {
-            return response()->json(['message' => 'No se proporcionaron datos de movimientos.'], 400);
-        }
-
-        $insumoActual = Insumos::find($insumoId);
-        if (!$insumoActual) {
-            return response()->json(['message' => "Insumo con ID {$insumoId} no encontrado."], 404);
-        }
-        // Asume que control_cebado es 'Y' para verdadero, o 1, o true. Ajusta según tu DB.
-        $loteRequerido = ($insumoActual->control_cebado === 'Y');
-
-        $erroresDeValidacion = [];
-        $movimientosGuardados = [];
-
-        DB::beginTransaction(); // Iniciar transacción
+        $movimientosData = $request->input('movimientos');
 
         try {
-            foreach ($movimientosData as $index => $data) {
-                $reglasBase = [
-                    'fecha' => 'required|date',
-                    'cant_movida' => 'required|numeric|min:0.01', // No permitir 0
-                    'observacion' => ($tipoOperacion === 'entradas') ? 'required|string|max:255' : 'nullable|string|max:255',
-                    'lote' => $loteRequerido ? 'required|string|max:100' : 'nullable|string|max:100',
-                ];
 
-                if ($tipoOperacion === 'entradas') {
-                    $reglasBase['factura_boleta'] = 'nullable|string|max:100';
-                    $reglasBase['proveedor'] = 'nullable|string|max:100';
-                }
-                // Aquí podrías añadir más reglas específicas si las cabeceras de 'salidas' son diferentes
+            Log::info('Antes de entrar al registarNuevosMovimietnos ');
+            $idsMovimientosCreados = $this->movimientoService->registrarNuevosMovimientos(
+                $movimientosData,
+                $insumoId,
+                $almacenNombre
+            );
 
-                $validador = Validator::make($data, $reglasBase);
 
-                if ($validador->fails()) {
-                    $erroresDeValidacion["movimiento_{$index}"] = $validador->errors();
-                    continue; // Saltar este movimiento y continuar con el siguiente
-                }
+            return response()->json([
+                'message' => count($idsMovimientosCreados) . ' movimiento(s) guardado(s) con éxito.',
+                'data' => ['ids_creados' => $idsMovimientosCreados]
+            ], 201);
 
-                // Crear el movimiento
-                MovimientoAlmacen::create([ // Asegúrate que este es tu modelo y que los campos coinciden
-                    'fk_insumos' => $insumoId,
-                    'almacen' => $almacenNombre,
-                    'tipo_movimiento' => $data['tipo_movimiento'], // 'entrada' o 'salida'
-                    'fecha' => $data['fecha'],
-                    'cant_movida' => $data['cant_movida'],
-                    'factura_boleta' => $data['factura_boleta'] ?? null,
-                    'observacion' => $data['observacion'],
-                    'lote' => $data['lote'],
-                    'proveedor' => $data['proveedor'] ?? null,
-                    // ...otros campos que necesites: usuario_id, etc.
-                ]);
-                // Nota: El cálculo de stock se omitió aquí, se recalculará al llamar a fetchMovimientos.
-            }
-
-            if (!empty($erroresDeValidacion)) {
-                DB::rollBack(); // Revertir si hubo errores
-                return response()->json([
-                    'message' => 'Algunos movimientos no pasaron la validación.',
-                    'errors' => $erroresDeValidacion
-                ], 422);
-            }
-
-            DB::commit(); // Confirmar transacción si todo OK
-            return response()->json(['message' => 'Movimiento(s) guardado(s) con éxito.'], 201);
-
+        } catch (CustomValidationException $e) { // Captura tu excepción personalizada
+            Log::warning("[MovimientoController@store] Errores de validación del servicio: " . $e->getMessage(), $e->getErrors());
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->getErrors()
+            ], 422); // Unprocessable Entity
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("API [store Movimiento]: Error al guardar:", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['message' => 'Error interno al guardar los movimientos.', 'error_detail' => $e->getMessage()], 500);
+            Log::error("[MovimientoController@store] Excepción general: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error interno al procesar la solicitud.',
+                'error_detail' => $e->getMessage() // No envíes e->getTraceAsString() a producción
+            ], 500);
         }
     }
 
     public function updateMovimiento(Request $request, $movimientoId)
     {
-        Log::info('Entrado al metodo updateMovimietno 1.');
-        $movimiento = MovimientoAlmacen::find($movimientoId);
-        if (!$movimiento) {
-            Log::info('No se encontró el movimiento con su id .', ['movimientoId' => $movimientoId]);
-            return response()->json(['message' => 'Movimiento no encontrado'], 404);
+        $datosParaActualizar = $request->all();
+
+        $validadorPayload = Validator::make($datosParaActualizar, [
+            'fecha' => 'sometimes|required|date_format:Y-m-d',
+            'cant_movida' => 'sometimes|required|integer|min:1',
+        ]);
+        if ($validadorPayload->fails()){
+            return response()->json(['message' => 'Payload inválido.', 'errors' => $validadorPayload->errors()], 422);
         }
 
-        $insumoActual = Insumos::find($movimiento->fk_insumos); // Necesitas el insumo_id del movimiento
-        $loteRequerido = false;
-        if ($insumoActual && ($insumoActual->control_cebado === 'Y') && $movimiento->tipo_movimiento === 'entrada') {
-            $loteRequerido = true;
-        }
 
-        $reglas = [
-            'fecha' => 'required|date',
-            'cant_movida' => 'required|numeric|min:0.01',
-            'observacion' => ($movimiento->tipo_movimiento === 'entrada') ? 'required|string|max:255' : 'nullable|string|max:255', // Ajusta si es obligatorio para salidas también
-            'lote' => $loteRequerido ? 'required|string|max:100' : 'nullable|string|max:100',
-        ];
-
-        if ($movimiento->tipo_movimiento === 'entrada') {
-            $reglas['factura_boleta'] = 'nullable|string|max:100';
-            $reglas['proveedor'] = 'nullable|string|max:100';
-        }
-
-        $validador = Validator::make($request->all(), $reglas);
-
-        if ($validador->fails()) {
-            return response()->json(['message' => 'Datos de entrada inválidos.', 'errors' => $validador->errors()], 422);
-        }
-
-        $datosParaActualizar = $validador->validated();
-
-
-        
-        // --- Actualización ---
-        // DB::beginTransaction();
         try {
+            $movimientoActualizado = $this->movimientoService->actualizarUnMovimiento(
+                (int)$movimientoId,
+                $datosParaActualizar
+            );
+            return response()->json([
+                'message' => 'Movimiento actualizado con éxito.',
+                'data' => $movimientoActualizado
+            ], 200);
 
-            Log::info('Se entro al try de la actualizacion');
-            
-            $movimiento->update($datosParaActualizar);
-           
-
-            Log::info('Se entro al try de la actualizacion 2');
-
-            // --- Recalcular Stock (Opcional - Simplificado) ---
-
-            // DB::commit();
-
-            return response()->json(['message' => 'Movimiento actualizado con éxito.', 'movimiento' => $movimiento]);
-
+        } catch (CustomValidationException $e) {
+            Log::warning("[MovimientoController@update] Error de validación del servicio para Mov ID {$movimientoId}: " . $e->getMessage(), $e->getErrors());
+            return response()->json(['message' => $e->getMessage(), 'errors' => $e->getErrors()], 422);
         } catch (\Exception $e) {
-            Log::info('Se vio un error en el try de la actualizacion', ['error' => $e->getMessage()]);
-            // DB::rollBack();
-            return response()->json(['message' => 'Error al actualizar el movimiento', 'error' => $e->getMessage()], 500);
+            Log::error("[MovimientoController@update] Excepción general para Mov ID {$movimientoId}: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error interno al actualizar el movimiento.',
+                'error_detail' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -297,21 +323,26 @@ class MovimientoController extends Controller
 
 
 
-    public function destroy(string $id)
+    public function destroy(string $movimientoId)
     {
+        Log::info("[MovimientoController@destroy] Solicitud para eliminar Movimiento ID: {$movimientoId}");
         try {
-            $movimiento = MovimientoAlmacen::findOrFail($id);
-
-            $movimiento->delete();
+            $this->movimientoService->eliminarUnMovimiento((int)$movimientoId); // Llama al servicio
 
             return response()->json(['message' => 'Movimiento eliminado con éxito.'], 200);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['message' => 'Movimiento no encontrado.'], 404);
+        } catch (CustomValidationException $e) {
+            Log::warning("[MovimientoController@destroy] Error de validación del servicio para Mov ID {$movimientoId}: " . $e->getMessage(), $e->getErrors());
+            return response()->json(['message' => $e->getMessage(), 'errors' => $e->getErrors()], 422); // Unprocessable Entity
+        } catch (ModelNotFoundException $e) {
+            Log::warning("[MovimientoController@destroy] Movimiento ID {$movimientoId} no encontrado por el servicio.");
+            return response()->json(['message' => 'Movimiento no encontrado para eliminar.'], 404); // Not Found
         } catch (\Exception $e) {
-            
-            Log::error("Error al eliminar movimiento {$id}: " . $e->getMessage());
-            return response()->json(['message' => 'Error interno al eliminar el movimiento.'], 500);
+            Log::error("[MovimientoController@destroy] Excepción general para Mov ID {$movimientoId}: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error interno al eliminar el movimiento.',
+                'error_detail' => $e->getMessage() // En desarrollo, podrías enviar más detalles
+            ], 500); // Internal Server Error
         }
     
     }

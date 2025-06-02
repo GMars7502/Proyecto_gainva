@@ -19,7 +19,8 @@ class MovimientoAlmacen extends Model
         'factu_o_boleta',
         'observacion',
         'lote',
-        'proveedor'
+        'proveedor',
+        'almacen'
     ];
 
     public function insumo()

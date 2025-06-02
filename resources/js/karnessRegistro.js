@@ -1,6 +1,12 @@
 
 
-
+/**
+ * Para el registro de insumos, conectado con el archivo almacen/Karness.blade.php
+ * 
+ * 
+ * 
+ * 
+ */
 
 
 
@@ -11,7 +17,7 @@ export default ( config ) => ({
         //region VARIABLES
         
         // --- Estado (Propiedades) ---
-        insumoId: config.initialInsumoId || null,
+        insumoId: Number(config.initialInsumoId) || null,
         almacen: config.initialAlmacen || '',
         selectedYear: config.initialYear || new Date().getFullYear(),
         selectedMonth: config.initialMonth || new Date().getMonth() + 1,
@@ -28,6 +34,12 @@ export default ( config ) => ({
 
         // >> Estado de la Tabla
         movimientos: [], // Aquí irán los datos de la tabla
+        stockPorLoteData: [], 
+
+        // >> Datos de stock
+        totalStock: 0,
+        lotesConStock: [], // Aquí se guardarán los lotes con su stock
+
 
         // >> Estados de Carga
         isLoadingNav: false, // Realmente no se usa mucho ahora que la lista está pre-cargada
@@ -72,7 +84,7 @@ export default ( config ) => ({
             // Se inicia con una fila por defecto para salidas
             // { fecha: new Date().toISOString().slice(0,10), cantSaca: '', lote: '', observacion: '' }
         ],
-        MAX_SALIDAS: 10, // Límite de filas para salidas
+        MAX_SALIDAS: 5, // Límite de filas para salidas
 
         isSavingMovement: false, // Para el estado de carga del botón "Guardar"
 
@@ -87,13 +99,28 @@ export default ( config ) => ({
             fecha: '',
             tipo_movimiento: '', 
             cant_movida: '',
-            factura_boleta: '',
+            factu_o_boleta: '',
             observacion: '',
             lote: '',
             proveedor: ''
         },
 
         isUpdatingMovement: false, 
+
+
+        get minDateForCurrentMonth() {
+        const now = new Date();
+        // Primer día del mes actual
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        return firstDay.toISOString().slice(0, 10); // Formato YYYY-MM-DD
+        },
+
+        get maxDateForCurrentMonth() {
+            const now = new Date();
+            // Último día del mes actual (yendo al día 0 del mes siguiente)
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            return lastDay.toISOString().slice(0, 10); // Formato YYYY-MM-DD
+        },
 
 
 
@@ -106,6 +133,7 @@ export default ( config ) => ({
         //region Inicio
 
         init() {
+    
             console.log('Inicializando karnessRegistro con config:', config);
             if (!this.insumoId || !this.almacen) {
                 console.error('Error: Falta ID de insumo inicial o nombre de almacén.');
@@ -120,6 +148,7 @@ export default ( config ) => ({
             }
 
             // Configura la navegación inicial
+            // Usar el método para navegar al insumo inicial
             this.updateNavigationState();
 
             // Verificar si el insumo inicial se encontró en la lista
@@ -135,7 +164,7 @@ export default ( config ) => ({
 
 
             // >>> ¡Ahora llamamos a fetchMovimientos al iniciar! <<<
-            this.fetchMovimientos();
+            this.navigateToInsumo(this.insumoId); 
         },
 
 
@@ -146,31 +175,30 @@ export default ( config ) => ({
          * basándose en el insumoId actual y la lista local insumoList.
          */
         updateNavigationState() {
-             console.log("Actualizando estado de navegación para insumoId:", this.insumoId);
+            console.log("[updateNavigationState] Actualizando para insumoId:", this.insumoId);
             if (!this.insumoList || this.insumoList.length === 0) {
                 this.currentIndex = -1;
                 this.insumoActual = null;
                 this.insumoAnterior = null;
                 this.insumoSiguiente = null;
-                 console.log("Lista de insumos vacía, navegación desactivada.");
                 return;
             }
 
-            // AJUSTE: Asegúrate que la propiedad es 'idInsumo' si ese es el nombre en el modelo/JSON
-            this.currentIndex = this.insumoList.findIndex(insumo => insumo.idInsumo == this.insumoId); // Comparación flexible con == por si acaso
+            // Asegúrate que 'idInsumo' sea el nombre correcto de la propiedad ID en tu insumoList
+            this.currentIndex = this.insumoList.findIndex(insumo => insumo.idInsumo == this.insumoId); // Usar == para comparación flexible string/número
 
             if (this.currentIndex !== -1) {
                 this.insumoActual = this.insumoList[this.currentIndex];
                 this.insumoAnterior = (this.currentIndex > 0) ? this.insumoList[this.currentIndex - 1] : null;
                 this.insumoSiguiente = (this.currentIndex < this.insumoList.length - 1) ? this.insumoList[this.currentIndex + 1] : null;
-                console.log('Estado de navegación actualizado:', { actual: this.insumoActual?.Nombre, anterior: this.insumoAnterior?.Nombre, siguiente: this.insumoSiguiente?.Nombre });
             } else {
-                console.warn(`Insumo ID ${this.insumoId} no encontrado en insumoList.`);
-                // Mantenemos el insumoId pero indicamos que no está en la lista navegable
-                // Si insumoActual ya fue cargado por el controlador, no lo sobrescribas aquí a menos que sea necesario
-                 if (!this.insumoActual) { // Solo si no tenemos nada aún
-                     this.insumoActual = { Nombre: `Insumo ID ${this.insumoId} (Fuera de lista)` };
-                 }
+                console.warn(`[updateNavigationState] Insumo ID ${this.insumoId} no encontrado en insumoList. Puede ser un ID inicial no presente en la lista filtrada.`);
+                // Si el insumoId inicial no está en la lista (ej. si la lista está filtrada y el ID inicial no cumple el filtro),
+                // insumoActual podría necesitar obtenerse de otra forma o mostrar un estado especial.
+                // Por ahora, si no se encuentra, se limpia la navegación.
+                // O podrías intentar buscarlo en config.initialInsumoList si esta fuera diferente o más completa.
+                // Asumiendo que initialInsumoList es la fuente de verdad:
+                this.insumoActual = null; // O un objeto por defecto: { Nombre: 'Insumo no en lista' }
                 this.insumoAnterior = null;
                 this.insumoSiguiente = null;
             }
@@ -180,17 +208,29 @@ export default ( config ) => ({
          * Cambia al insumo con el ID dado, actualiza la navegación y recarga los movimientos.
          * @param {number} newInsumoId El ID del nuevo insumo.
          */
-        navigateToInsumo(newInsumoId) {
-            if (!newInsumoId || newInsumoId == this.insumoId) return; // Evitar recargas innecesarias
+        navigateToInsumo(newInsumoIdValue) {
+                const nuevoId = parseInt(newInsumoIdValue, 10); // Convertir a número
 
-            console.log(`Navegando al insumo ID: ${newInsumoId}`);
-            this.insumoId = newInsumoId;      // 1. Actualizar el ID
-            this.updateNavigationState();    // 2. Actualizar UI de navegación (anterior/siguiente/actual)
-            this.fetchMovimientos();         // 3. Recargar la tabla de movimientos para el nuevo insumo
+                // Prevenir recarga si el ID no es válido o es el mismo que el actual Y no estamos ya cargando
+                // Si está cargando, y el usuario intenta cambiar, la nueva solicitud debería tomar precedencia
+                // o ser encolada/manejada por la lógica de "ignorar respuestas obsoletas" en fetchMovimientos.
+                if (isNaN(nuevoId) || (nuevoId === this.insumoId && !this.isLoadingTable) ) {
+                    if (isNaN(nuevoId)) console.warn('[navigateToInsumo] ID inválido:', newInsumoIdValue);
+                    // Si el ID es el mismo, simplemente no hacemos nada para evitar recargas innecesarias.
+                    // Si el usuario re-selecciona el mismo item, el x-model ya tiene el valor correcto.
+                    return;
+                }
 
-            // Opcional: Actualizar URL del navegador para reflejar el nuevo estado
-            // const newUrl = `/almacen/karness/${this.almacen}/${this.insumoId}`; // Ajusta la ruta base si es necesario
-            // window.history.pushState({ insumoId: this.insumoId }, '', newUrl);
+                // Si se selecciona un nuevo ID válido
+                console.log(`[navigateToInsumo] Solicitado para Insumo ID: ${nuevoId} (Anterior: ${this.insumoId})`);
+                this.insumoId = nuevoId;          // 1. Actualizar el ID (x-model ya lo hizo si es un <select>)
+
+
+
+
+                console.log(`[navigateToInsumo] Actualizando navegación para Insumo ID: ${nuevoId}`);
+                this.updateNavigationState();     // 2. Actualizar insumoActual, Anterior, Siguiente
+                this.fetchMovimientos(); 
         },
 
         /**
@@ -221,31 +261,41 @@ export default ( config ) => ({
          * Busca los movimientos para el insumoId, año y mes seleccionados desde la API.
          */
         async fetchMovimientos() {
-            console.log("Entrado al fetchMovimientos con insumoId:", this.insumoId);
-            if (!this.insumoId) {
-                console.log("fetchMovimientos - No hay insumoId seleccionado.");
+
+            console.log('Ingresado al fetchMovimientos');
+
+            const idInsumoSolicitado = this.insumoId;
+
+            if (!idInsumoSolicitado) {
+                console.warn("[fetchMovimientos] No hay insumoId seleccionado. Limpiando movimientos.");
                 this.movimientos = [];
+                this.stockPorLoteData = [];
+                this.totalStock = 0;
+                this.lotesConStock = [];
+                this.isLoadingTable = false; // Asegurar que el loader se apague
                 return;
             }
+
             if (!this.apiEndpoints.getmovimientos) {
-                 console.error("Endpoint 'getMovimientos' no configurado.");
-                 return;
+                console.error('No se entra al getMovimientos');
+                this.isLoadingTable = false;
+                return;
             }
 
-            this.isLoadingTable = true;
-            this.movimientos = []; // Limpiar tabla mientras carga
 
-            // Construir la URL reemplazando el placeholder y añadiendo query params
-            console.log("ESTA ES LA URL: ", this.apiEndpoints.getmovimientos)
+            this.isLoadingTable = true;
+            
+
+
             const url = this.apiEndpoints.getmovimientos.replace('{$insumoId}', this.insumoId);
             const queryParams = new URLSearchParams({
                 year: this.selectedYear,
                 month: this.selectedMonth,
+                almacen: this.almacen // Asegúrate que 'almacen' es un parámetro válido para tu API
                 // Podrías añadir 'almacen' si la API lo necesita para filtrar movimientos
                 // almacen: this.almacen
             });
 
-            console.log(`Workspaceing movimientos from: ${url}?${queryParams}`);
 
             try {
                 const response = await fetch(`${url}?${queryParams}`, {
@@ -261,16 +311,62 @@ export default ( config ) => ({
                 }
 
                 const data = await response.json();
-                this.movimientos = data; // Asume que la API devuelve un array de movimientos
-                console.log("Movimientos recibidos:", this.movimientos);
+               
+                
+                if (idInsumoSolicitado === this.insumoId) {
+                    console.log(`[fetchMovimientos] Aplicando datos para Insumo ID: ${this.insumoId}`);
+                    this.movimientos = data.movimientos || [];
+                    this.stockPorLoteData = data.stockPorLote || [];
+
+                    console.log("[fetchMovimientos] Datos de movimientos recibidos:", this.movimientos);
+
+                    let sumatotal = 0;
+                    let _lotesConStockTemp = [];
+                    if (this.stockPorLoteData && Array.isArray(this.stockPorLoteData)) {
+                        this.stockPorLoteData.forEach(element => {
+                            // Asegúrate que 'element.stock_consolidado' sea el nombre correcto de la propiedad
+                            if (element && typeof element.cant_stock === 'number') {
+                                sumatotal += element.cant_stock;
+                                if (element.lote && element.cant_stock > 0) { // Solo lotes con stock para el desplegable de salidas
+                                    _lotesConStockTemp.push({
+                                        lote: element.lote,
+                                        stock: element.cant_stock // O el nombre que uses en tu desplegable
+                                    });
+                                }
+                            } else {
+                                console.warn("[fetchMovimientos] Elemento en stockPorLoteData no tiene 'stock_consolidado' como número:", element);
+                            }
+                        });
+                    }
+                    this.totalStock = sumatotal;
+                    this.lotesConStock = _lotesConStockTemp;
+
+                    console.log("[fetchMovimientos] Datos de movimientos y stock aplicados. Total stock:", this.totalStock);
+                    console.log("[fetchMovimientos] Lotes con stock para salidas:", this.lotesConStock);
+
+                    // Esperar al siguiente "tick" del DOM para que se renderice la tabla
+                    // antes de potencialmente ocultar el loader en el 'finally'.
+                    await this.$nextTick();
+                    console.log('[fetchMovimientos] DOM actualizado después de $nextTick.');
+
+                } else {
+                    console.warn(`[fetchMovimientos] Respuesta ignorada para Insumo ID: ${idInsumoSolicitado} porque el insumo actual es ${this.insumoId}.`);
+                }
 
             } catch (error) {
                 console.error('Error al buscar movimientos:', error);
-                this.movimientos = []; // Dejar tabla vacía en caso de error
-                // Podrías añadir una variable de estado para mostrar un mensaje de error en la UI
-                // this.errorTabla = 'No se pudieron cargar los movimientos.';
+                 if (idInsumoSolicitado === this.insumoId) {
+                this.movimientos = [];
+                this.stockPorLoteData = [];
+                this.totalStock = 0;
+                this.lotesConStock = [];
+                // Considera mostrar un mensaje de error en la UI
+                // this.errorTabla = `No se pudieron cargar los movimientos: ${error.message}`;
+                 }
             } finally {
-                this.isLoadingTable = false;
+                    if (idInsumoSolicitado === this.insumoId) {
+                        this.isLoadingTable = false;
+                    }
             }
         },
 
@@ -352,13 +448,21 @@ export default ( config ) => ({
             return false;
         },
 
+        lotesDisponiblesParaSalida() {
+        if (!this.lotesConStock || !Array.isArray(this.lotesConStock)) {
+            return [];
+        }
+        return this.lotesConStock.filter(item => item.lote && item.stock > 0);
+        // Asegúrate que 'item.lote' y 'item.stock' sean los nombres correctos de las propiedades.
+    },
+
         saveMovements() {
             this.isSavingMovement = true;
             console.log("Intentando guardar movimientos...");
 
             let payload = {
                 tipo: this.createModalTab, // 'entradas' o 'salidas'
-                insumo_id: this.insumoId,
+                idInsumo: this.insumoId,
                 almacen: this.almacen, // Pasamos el almacén actual
                 movimientos: []
             };
@@ -380,7 +484,7 @@ export default ( config ) => ({
                         tipo_movimiento: 'entrada', // Campo para el backend
                         fecha: entrada.fecha,
                         cant_movida: entrada.cantEntrada,
-                        factura_boleta: entrada.factura, // Nombre de campo para el backend
+                        factu_o_boleta: entrada.factu_o_boleta, // Nombre de campo para el backend
                         observacion: entrada.observacion,
                         lote: entrada.lote,
                         proveedor: entrada.proveedor
@@ -469,6 +573,69 @@ export default ( config ) => ({
         openViewModal(movimiento) {
             console.log("Abrir modal para ver movimiento:", movimiento);
             // Lógica para mostrar un modal de visualización (solo lectura)
+        },
+
+
+         /**
+         * Calcula la siguiente fecha laborable (omitiendo domingos) a partir de una fecha dada.
+         * @param {string} dateString - La fecha de inicio en formato 'YYYY-MM-DD'.
+         * @returns {string|null} - La fecha formateada como 'DD/MM/YYYY (I-II-III)' o null si la entrada es inválida.
+         */
+        getFormattedNextWorkingDay(dateString) {
+            if (!dateString) return null;
+
+            try {
+                // Parsea la fecha 'YYYY-MM-DD' para evitar problemas de zona horaria con `new Date(string)`
+                const parts = dateString.split('-');
+                if (parts.length !== 3) return null; // Validación básica del formato
+
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Mes es 0-indexado en JavaScript Date
+                const day = parseInt(parts[2], 10);
+
+                if (isNaN(year) || isNaN(month) || isNaN(day)) return null; // Validación de números
+
+                let targetDate = new Date(year, month, day);
+                targetDate.setDate(targetDate.getDate() + 1); // Mover al siguiente día calendario
+
+                // Si el siguiente día es Domingo (getDay() === 0), mover al Lunes
+                if (targetDate.getDay() === 0) {
+                    targetDate.setDate(targetDate.getDate() + 1);
+                }
+
+                // Formatear la fecha a DD/MM/YYYY usando toLocaleDateString (consistente con tu función formatDate)
+                const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                const formattedDate = targetDate.toLocaleDateString('es-PE', options);
+
+                return `${formattedDate} (I-II-III)`;
+
+            } catch (e) {
+                console.error("Error al calcular la siguiente fecha laborable:", e);
+                return null;
+            }
+        },
+
+        /**
+         * Devuelve un array de opciones de observación para una fila de salida.
+         * Incluye opciones fijas y una opción dinámica de "fechasiguiente".
+         * @param {string} fechaSalida - La fecha de la salida actual (YYYY-MM-DD), usada para calcular la fecha siguiente.
+         * @returns {string[]} - Array de strings con las opciones.
+         */
+        getSalidaObservationOptions(fechaSalida) {
+            const fixedOptions = [
+                "Limpieza",
+                "Kit Emerge"
+                // Puedes añadir más opciones fijas aquí si lo necesitas
+            ];
+
+            const nextDayOption = this.getFormattedNextWorkingDay(fechaSalida);
+
+            if (nextDayOption) {
+                // Poner la fecha siguiente al inicio de la lista para que sea más visible
+                return [nextDayOption, ...fixedOptions];
+            } else {
+                return fixedOptions;
+            }
         },
 
         //********************************************************************************************* */
@@ -578,7 +745,7 @@ export default ( config ) => ({
             fecha: movimiento.fecha ? new Date(movimiento.fecha).toISOString().slice(0,10) : '', // Formato YYYY-MM-DD
             tipo_movimiento: movimiento.tipo_movimiento, // No editable, pero útil para la lógica
             cant_movida: movimiento.cant_movida || '',
-            factura_boleta: movimiento.factura_boleta || '',
+            factu_o_boleta: movimiento.factu_o_boleta || '',
             observacion: movimiento.observacion || '',
             lote: movimiento.lote || '',
             proveedor: movimiento.proveedor || ''
@@ -652,7 +819,7 @@ export default ( config ) => ({
             lote: dataToUpdate.lote,
             // Solo enviar factura y proveedor si es una entrada y tienen valor o son relevantes
             ...(dataToUpdate.tipo_movimiento === 'entrada' && {
-                 factura_boleta: dataToUpdate.factura_boleta,
+                 factu_o_boleta: dataToUpdate.factu_o_boleta,
                  proveedor: dataToUpdate.proveedor
             })
             // NO enviar tipo_movimiento, fk_insumos, almacen si no son editables

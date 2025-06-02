@@ -14,7 +14,7 @@ class KarnessList extends Component
     public function mount()
     {
         if (!$this->inventario) {
-            $this->inventario = 'Total'; // O el valor por defecto deseado
+            $this->inventario = 'Principal'; // O el valor por defecto deseado
         }
         $this->loadKarness();
     }

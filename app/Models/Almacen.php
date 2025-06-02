@@ -5,22 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Almacen extends Model
 {
     use HasFactory;
     protected $table = 'almacen';
+    protected $primaryKey = 'idAlmacen'; 
     protected $fillable = [
-        'Fk_MA',
         'zona',
+        'idInsumo',
         'cant_stock',
         'lote',
+        'fecha_guardado',
         'fechaVencimiento',
+        'updated_at',
+        'created_at',
     ];
     
-    
-    public function MovimientoAlmacen()
+    public function Insumos()
     {
-        return $this->belongsTo(MovimientoAlmacen::class, 'Fk_MA');
+        return $this->belongsTo(Insumos::class, 'idInsumo');
     }
 
     

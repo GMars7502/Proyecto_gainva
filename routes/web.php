@@ -6,6 +6,9 @@ use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\ControlCebadoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MovimientoController;
+use App\Http\Controllers\InsumosController;
+use App\Http\Controllers\PermisoController;
+use App\Http\Controllers\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,8 +24,11 @@ Route::middleware(['auth', 'can:users.index'])->group(function () {
     Route::resource('/users', UsuarioController::class)->names('users');
 });
 */
+Route::get('/', function () {
+    return redirect('/login'); // Redirecciona a /ruta-destino
+});
 
-Route::view('/', 'welcome');
+//Route::view('/', 'welcome');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
@@ -52,6 +58,19 @@ Route::group(['middleware' => 'auth'], function() {
         'show'
     ]);
 
+    Route::resource('insumos', InsumosController::class)->except([
+        'show'
+    ]);
+
+    Route::resource('permisos', PermisoController::class)->except([
+        'show'
+    ]);
+    
+    Route::resource('roles', RoleController::class)->except([
+        'show'
+    ]);
+
+    
 
     Route::get('/movimiento_almacen/get-movimientos/{insumoId}', [MovimientoController::class, 'getMovimientos']);
 
