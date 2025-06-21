@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Insumos;
 use App\Models\MovimientoAlmacen;
 use App\Models\Almacen; // Tu modelo de stock consolidado
+use App\Models\ControlCebado; // Si necesitas el modelo de ControlCebado
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -209,6 +210,181 @@ class MovimientoService
                         'proveedor'       => $dataMov['proveedor'] ?? null,
                     ]);
                     $idsMovimientosCreados[] = $movimientoGuardado->idMovimiento;
+
+                    
+
+                    //**
+                        //  AQUI SE REALIZAR LA LOGICA PARA GUARDAR EL CONTROL DE CEBADO 
+                        // Se debería crear un metodo propio para esto, pero por ahora lo dejamos aquí 20.06.2025
+                        // 
+                        //  */
+
+
+                    if($dataMov['tipo_movimiento'] === 'salida' && $loteRequeridoParaInsumo && str_contains($dataMov['observacion'], '(I-II-III)')){
+
+
+
+                        log::info("Entrado a la lógica de control de cebado :VVV ");
+
+                        $siguienteFecha = Carbon::parse($dataMov['fecha'])->addDay();
+
+                        // Si el siguiente día es sábado, saltar al lunes (sumar 2 días más)
+                        if ($siguienteFecha->isSunday()) {
+                            $siguienteFecha->addDays(1);
+                        }
+
+                        log::info("Despues de ingresar la fecha, Aqui se ingresar ene el query");
+
+
+
+                        // Insertar logíca para seleccionar el parametro lote1, lote2, lote3, etc.
+                        $query = ControlCebado::where('fk_insumos', $insumoId)
+                            ->where('actualFecha', '<=', $dataMov['fecha'])
+                            ->orderBy('actualFecha', 'desc')
+                            ->orderBy('idControl', 'desc');
+                        
+
+                        $arrayQuery =  $query->get()->toArray();
+
+                                    log::info("Total de registros en el arrayQuery: " . count($arrayQuery));
+                                    log::info("Valor del arrayQuery: " . json_encode($arrayQuery));
+
+                        $primerDataControlCebado = $query->first();
+
+                        
+                        
+
+                        $LoteFinal = $dataMov['lote'];
+                        $CantFinal = $dataMov['cant_movida'];
+
+                        log::info("Lote Final: {$LoteFinal}, Cantidad Final: {$CantFinal}");
+
+                        
+
+                        if($primerDataControlCebado == null){
+                            log::info("el primerDataControlCebado es nulo, se poner con un valor de 1 la posicion");
+                            $numeroDePosicion = 1;
+                        }
+                        else{
+
+                            $numeroDePosicion = 1;
+                            $loteActual = null;
+
+
+                            log::info("Entado al else del primerDataControlCebado, entrado al primer for");
+
+                            for ($i=1; $i <= 4 ; $i++) { 
+                                if ($primerDataControlCebado->{'lote' . $i} != null) {
+                                    $loteActual = $primerDataControlCebado->{'lote' . $i};
+                                    $numeroDePosicion = $i;
+
+                                    log::info("Lote actual encontrado: {$loteActual} en la posición {$numeroDePosicion}");
+                                    break;
+
+                                }
+                            }
+
+
+                            if ($loteActual !== $LoteFinal){
+
+                                log::info("Se entró ya que no coincide los lotes actual y final");
+                                
+                                for ($i= 1; $i <= 4 ; $i++) {
+
+                                    $numeroDePosicion = $i;
+
+                                   log::info("Entrado al segundo for con disminución");
+
+
+                                    Log::info("Número de posición inicial: " . $numeroDePosicion);
+
+                                    $posicionLoteSinContenido = True;
+
+                                    foreach ($arrayQuery as $key => $value) {
+                                        log::info("Entrado al foreach de los valores del query");
+
+                                        $keyLote = 'lote' . $i;
+
+                                        $valorLote = $value[$keyLote] ?? null;
+
+                                        
+
+                                        log::info("Valor del lote en la posición {$i}: {$valorLote}");
+
+                                        if (is_null($valorLote)) {
+                                            log::info("es nulo el valor lote");
+
+                                            $posicionLoteNoVacio = True;
+                                        }else {
+                                            $posicionLoteNoVacio = False;
+                                        }
+
+
+                                        if(!$posicionLoteNoVacio)
+                                        {
+                                            $posicionLoteSinContenido = False;
+
+                                            log::info("Entrado al for de los lotes, se verifica si el lote {$valorLote} es igual al lote final {$LoteFinal}");
+
+                                            if ($valorLote  === $LoteFinal){
+                                                $numeroDePosicion = $i;
+                                                log::info("Lote encontrado en posición {$numeroDePosicion} con lote {$LoteFinal}");
+                                
+
+
+                                                break 2;
+
+                                            }
+                                            else {
+                                                log::info("Lote no encontrado en la posición {$i}, se sigue buscando");
+                                            }
+                                        }    
+                                    }
+
+                                    if ($posicionLoteSinContenido) {
+                                        log::info("Se encontró una posición vacía en lote {$i}, se asignará el lote final {$LoteFinal} aquí.");
+                                        $numeroDePosicion = $i;
+                                        break;
+                                    }
+
+
+
+
+                                }
+                            }
+
+
+
+
+                        }
+
+
+                        if ($numeroDePosicion > 4) {
+                            Log::warning("Posición mayor a 4 detectada, se usará la posición 4.");
+                            $numeroDePosicion = 4;
+                        }
+                        
+                        $dataCebado = [
+                            'fk_insumos' => $insumoId,
+                            'actualFecha' => $dataMov['fecha'],
+                            'siguienteFecha' => $siguienteFecha,
+                            'status' => 'N',
+                        ];
+
+                        $dataCebado['lote' . $numeroDePosicion] = $LoteFinal;
+                        $dataCebado['cant' . $numeroDePosicion] = $CantFinal;
+
+                        ControlCebado::create($dataCebado);
+
+
+
+
+                    }
+
+
+
+
+
 
                     
                     $this->actualizarStockConsolidado(

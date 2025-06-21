@@ -85,7 +85,7 @@ Route::group(['middleware' => 'auth'], function() {
 
 
 
-
+    Route::get('/table-control-cebado', [ControlCebadoController::class, 'table'])->name('control_cebado.table');
     
     Route::get('/almacen/karness/{almacen}/{insumoId}', [AlmacenController::class, 'karness'])->name('almacen.karness');
 

@@ -11,7 +11,6 @@ class ControlCebado extends Model
     protected $table = 'control_cebado';
     protected $fillable = [
         'fk_insumos',
-        'idmovimientoAlmacen',
         'actualFecha',
         'siguienteFecha',
         'lote1',
@@ -22,11 +21,10 @@ class ControlCebado extends Model
         'cant3',
         'lote4',
         'cant4',
+        'status',
+        'updated_at',
+        'created_at'
     ];
-    public function MovimientoAlmacen()
-    {
-        return $this->belongsTo(MovimientoAlmacen::class, 'idmovimientoAlmacen');
-    }
     public function Insumos()
     {
         return $this->belongsTo(Insumos::class, 'fk_insumos');

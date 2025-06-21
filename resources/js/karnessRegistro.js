@@ -14,7 +14,7 @@
 
 export default ( config ) => ({
     
-        //region VARIABLES
+        //region VARIABLESyae
         
         // --- Estado (Propiedades) ---
         insumoId: Number(config.initialInsumoId) || null,
@@ -165,6 +165,7 @@ export default ( config ) => ({
 
             // >>> ¡Ahora llamamos a fetchMovimientos al iniciar! <<<
             this.navigateToInsumo(this.insumoId); 
+            this.fetchMovimientos(); 
         },
 
 
