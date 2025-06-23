@@ -34,6 +34,7 @@
                 <label for="karness-year" class="block text-sm sm:text-base font-medium text-blue-900 mb-1 sm:mb-2">Año</label>
                 <select id="karness-year"
                         x-model="selectedYear"
+                        @change="recallTotales()"
                         class="bg-white border border-blue-300 text-blue-900 font-semibold px-4 sm:px-6 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         :disabled="isLoadingTable">
                     @for ($year = 2020; $year <= now()->year; $year++)
@@ -45,6 +46,7 @@
                 <label for="karness-month" class="block text-sm sm:text-base font-medium text-blue-900 mb-1 sm:mb-2">Mes</label>
                 <select id="karness-month"
                         x-model="selectedMonth"
+                        @change="recallTotales()"
                         class="bg-white border border-blue-300 text-blue-900 font-semibold px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         :disabled="isLoadingTable">
                     @php
@@ -69,6 +71,34 @@
             @endforeach
         </div>
 
+         <hr>
+
+        <div>
+            <p> *Regla Administrativa: El total de filtros deber ser igual a total de Set de lineas por cada mes.</p>
+        </div>
+
+        <div class="mt-6 border-t pt-4">
+            <h2 class="text-lg font-bold mb-2">Totales por Insumo</h2>
+
+            <div x-show="isLoadingTable" class="flex items-center gap-2 text-blue-600 animate-pulse">
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10"
+                            stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l5-5-5-5v4a10 10 0 00-10 10h4z"></path>
+                </svg>
+                Cargando totales...
+            </div>
+
+            <template x-for="(item, index) in totalInsumos" :key="index">
+                <div class="flex justify-between border-b py-1 text-sm text-gray-700">
+                    <span x-text="item.InsumoNombre"></span>
+                    <span x-text="item.CantTotal"></span>
+                </div>
+            </template>
+        </div>
+
+
 
 
 
@@ -81,7 +111,8 @@
         window.Config = {
             csrfToken: '{{ csrf_token() }}',
             apiEndpoints: {
-                apiTable: '{{ route('control_cebado.table') }}'
+                apiTable: '{{ route('control_cebado.table') }}',
+                getTotales: '{{ route('control_cebado.ruleFiltrosSet') }}'
             },
         };
 

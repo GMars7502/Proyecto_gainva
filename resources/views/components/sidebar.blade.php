@@ -19,6 +19,12 @@
         </a>
         @endcan
         
+        @can('petitorio.index')
+        <a href="{{ route('petitorio.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('petitorio.*') ? 'bg-green-800' : '' }}">
+            Petitorio
+        </a>
+        @endcan
+
         @can('control_cebado.index')
         <a href="{{ route('control_cebado.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('control_cebado.*') ? 'bg-green-800' : '' }}">
             Control Cebado

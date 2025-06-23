@@ -8,6 +8,7 @@ USE App\Models\ControlCebado;
 use App\Models\Insumos;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ControlCebadoController extends Controller
 {
@@ -20,9 +21,6 @@ class ControlCebadoController extends Controller
         $InsumosConcontrolCebado = Insumos::where('control_cebado', 'Y')
             ->get();
 
-        log::info('Insumos con control de cebado: ' . $InsumosConcontrolCebado->count());
-
-
         return view('control_cebado.index', compact('InsumosConcontrolCebado'));
     }
 
@@ -31,24 +29,60 @@ class ControlCebadoController extends Controller
         $fecha = Carbon::parse($request->input('fecha'));
         $year = $fecha->year;
         $month = $fecha->month;
+        $variableprueba =$request->input('insumoid');
 
 
 
 
         $datosControlCebado = ControlCebado::whereYear('actualFecha', $year)
             ->whereMonth('actualFecha', $month)
-            ->where('fk_insumos', $request->input('idInsumo'))
+            ->where('fk_insumos', $request->input('insumoid'))
             ->orderBy('created_at', 'desc')
             ->get();
 
 
-        $prueba = "Hola que tal";
+        $prueba = "Hola que tal: {{$fecha}} i {{$variableprueba}}";
 
         
 
 
         return view('control_cebado.table', compact('datosControlCebado','prueba'));
 
+
+    }
+
+
+
+    public function ruleFiltrosSet(Request $request)
+    {
+        $fecha = Carbon::parse($request->input('fecha'));
+        $year = $fecha->year;
+        $month = $fecha->month;
+
+        // Obtener los insumos con control_cebado = 'Y'
+        $insumos = Insumos::where('control_cebado', 'Y')->get();
+
+        // Obtener los totales por insumo para ese mes y año
+        $totales = ControlCebado::select(
+                'fk_insumos as idInsumo',
+                DB::raw('SUM(COALESCE(cant1, 0) + COALESCE(cant2, 0) + COALESCE(cant3, 0) + COALESCE(cant4, 0)) as CantTotal')
+            )
+            ->whereYear('actualFecha', $year)
+            ->whereMonth('actualFecha', $month)
+            ->groupBy('fk_insumos')
+            ->get()
+            ->keyBy('idInsumo');
+
+        // Combinar insumos con sus totales
+        $resultado = $insumos->map(function ($insumo) use ($totales) {
+            return [
+                'idInsumo' => $insumo->idInsumo,
+                'InsumoNombre' => $insumo->Nombre,
+                'CantTotal' => $totales[$insumo->idInsumo]->CantTotal ?? 0
+            ];
+        });
+
+        return response()->json($resultado);
 
     }
 

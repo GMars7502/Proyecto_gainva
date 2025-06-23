@@ -9,6 +9,7 @@ use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\InsumosController;
 use App\Http\Controllers\PermisoController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PetitorioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +71,10 @@ Route::group(['middleware' => 'auth'], function() {
         'show'
     ]);
 
+    Route::resource('petitorio', PetitorioController::class)->except([
+        'show'
+    ]);
+
     
 
     Route::get('/movimiento_almacen/get-movimientos/{insumoId}', [MovimientoController::class, 'getMovimientos']);
@@ -84,6 +89,8 @@ Route::group(['middleware' => 'auth'], function() {
     Route::put('/movimiento_almacen/update-movimiento/{movimientoId}', [MovimientoController::class, 'updateMovimiento'])->name('movimiento_almacen.updateMovimiento');
 
 
+
+    Route::get('/ruleFiltrosSet', [ControlCebadoController::class, 'ruleFiltrosSet'])->name('control_cebado.ruleFiltrosSet');
 
     Route::get('/table-control-cebado', [ControlCebadoController::class, 'table'])->name('control_cebado.table');
     

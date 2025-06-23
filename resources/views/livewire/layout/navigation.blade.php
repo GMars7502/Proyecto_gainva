@@ -50,6 +50,12 @@ new class extends Component
                 </div>
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <x-nav-link :href="route('petitorio.index')" :active="request()->routeIs('petitorio.*')" wire:navigate>
+                        {{ __('Petitorio') }}
+                    </x-nav-link>
+                </div>
+
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('control_cebado.index')" :active="request()->routeIs('control_cebado.*')" wire:navigate>
                         {{ __('Control Cebado') }}
                     </x-nav-link>
