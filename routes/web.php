@@ -7,7 +7,7 @@ use App\Http\Controllers\ControlCebadoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\InsumosController;
-use App\Http\Controllers\PermisoController;
+use App\Http\Controllers\PermissionController;  
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PetitorioController;
 
@@ -63,13 +63,13 @@ Route::group(['middleware' => 'auth'], function() {
         'show'
     ]);
 
-    Route::resource('permisos', PermisoController::class)->except([
-        'show'
-    ]);
+    Route::get('permisos', [PermissionController::class, 'index'])->name('permisos.index');
+     
+
     
-    Route::resource('roles', RoleController::class)->except([
-        'show'
-    ]);
+    Route::resource('roles', RoleController::class);
+    
+
 
     Route::resource('petitorio', PetitorioController::class)->except([
         'show'
