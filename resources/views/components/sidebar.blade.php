@@ -7,12 +7,6 @@
             Dashboard
         </a>
         
-        @can('users.index')
-        <a href="{{ route('users.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('users.*') ? 'bg-green-800' : '' }}">
-            Usuarios
-        </a>
-        @endcan
-        
         @can('almacen.index')
         <a href="{{ route('almacen.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('almacen.*') ? 'bg-green-800' : '' }}">
             Almacén
@@ -34,6 +28,14 @@
         @can('inventario.index')
         <a href="{{ route('inventario.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('inventario.*') ? 'bg-green-800' : '' }}">
             Inventario
+        </a>
+        @endcan
+
+        <hr></hr>
+
+        @can('users.index')
+        <a href="{{ route('users.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('users.*') ? 'bg-green-800' : '' }}">
+            Usuarios
         </a>
         @endcan
 
