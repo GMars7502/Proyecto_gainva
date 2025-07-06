@@ -2,7 +2,7 @@
     <div x-data="petitorioEditar(config)" x-init="init()">
 
         <x-slot name="header">
-            <h1 class="text-xl font-semibold text-gray-800">Gestión de Petitorio → Editar Petitorio</h1>
+            <h1 class="text-xl font-semibold text-gray-800">Gestión de Petitorio → Mostrar Petitorio</h1>
         </x-slot>
 
         <div class="py-6">
@@ -27,7 +27,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label class="block font-semibold mb-1">Fecha Servicio</label>
-                        <input type="date" class="w-full p-2 border rounded" x-model="form.fecha_servicio" :disabled="form.status_proceso === 'confirmado'">
+                        <input type="date" class="w-full p-2 border rounded" x-model="form.fecha_servicio" readonly>
                     </div>
                     <div>
                         <label class="block font-semibold mb-1">Status Proceso</label>
@@ -61,22 +61,20 @@
                                         <input type="number" class="w-20 text-black p-1 rounded" x-model="item.cantidad_salida"
                                         :max="item.stock"
                                         :min="0"
-                                        :disabled="form.status_proceso === 'rectificado' || form.status_proceso === 'confirmado' || item.stock === 0"
+                                        :disabled
                                         @input="if (Number(item.cantidad_salida) > Number(item.stock)) { 
                                             
                                             alert('La cantidad no puede ser mayor al stock disponible.');
                                             item.cantidad = item.stock; 
                                         } else if (Number(item.cantidad_salida) <= 0) {
                                             item.cantidad_salida = 0;
-                                        }">
+                                        }" disabled>
                                     </td>
                                     <td class="p-2" x-text="item.stock || '0'"></td>
                                     <td class="p-2" x-text="item.control_lote"></td>
                                     <td class="p-2">
                                         <div class="flex gap-2">
-
-
-                                       
+                                           
                                             <div class="flex gap-2" x-show="['borrador','rectificado', 'confirmado', 'cancelado'].includes(form.status_proceso) && item.control_lote === 'Y' && Number(item.cantidad_salida) > 0">
                                                 <button type="button"
                                                         class="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-black text-xs rounded shadow"
@@ -99,56 +97,13 @@
                 <!-- Observación general -->
                 <div class="mb-6">
                     <label class="block font-semibold mb-1">Observación general</label>
-                    <textarea class="w-full p-2 border rounded" rows="3" x-model="form.observacion" :disabled="form.status_proceso === 'confirmado'"></textarea>
+                    <textarea class="w-full p-2 border rounded" rows="3" x-model="form.observacion" disabled></textarea>
                 </div>
 
                 <a href="{{ route('petitorio.index') }}"
                     class="px-4 py-2 bg-red-300 hover:bg-red-400 text-black font-semibold rounded shadow">
                         Salir
                 </a>
-
-                <!-- Botones -->
-                 @can('petitorio.borrador')
-                <div class="flex justify-end gap-4" x-show="form.status_proceso === 'borrador'">
-                    
-                    <button type="button" @click="guardar('rectificado')"
-                            class="px-4 py-2 bg-green-300 hover:bg-green-400 text-black font-semibold rounded shadow">
-                        Actualizar Estado: borrador → rectificado
-                    </button>
-                    <button type="button" @click="guardar('cancelado')"
-                            class="px-4 py-2 bg-red-300 hover:bg-red-400 text-black font-semibold rounded shadow">
-                        Actualizar Estado: borrador → cancelar
-                    </button>
-                </div>
-                @endcan
-
-
-                @can('petitorio.rectificador')
-                <div class="flex justify-end gap-4" x-show="form.status_proceso === 'rectificado'">
-
-                    <button type="button" @click="guardar('confirmado')"
-                            class="px-4 py-2 bg-green-300 hover:bg-green-400 text-black font-semibold rounded shadow">
-                        Actualizar Estado: rectificado → confirmado
-                    </button>
-                    <button type="button" @click="guardar('cancelado')"
-                            class="px-4 py-2 bg-red-300 hover:bg-red-400 text-black font-semibold rounded shadow">
-                        Actualizar Estado: rectificado → cancelar
-                    </button>
-                </div>
-                @endcan
-
-
-                @can('petitorio.confirmacion')
-                <div class="flex justify-end gap-4" x-show="form.status_proceso === 'confirmado'">
-                    
-                </div>
-                @endcan
-
-
-                <div class="flex justify-end gap-4" x-show="form.status_proceso === 'cancelado'">
-                    <span class="text-sm text-gray-700">Petitorio cancelado.</span>
-                </div>
-
 
 
             </div>
@@ -178,7 +133,7 @@
                     <div class="bg-white p-6 rounded shadow-xl w-full max-w-lg">
                         <h2 class="text-lg font-bold mb-4">Editar Lotes - <span x-text="loteActual.lote || loteActual.Nombre"></span></h2>
 
-                        <template x-if="form.status_proceso === 'rectificado'">
+                        <template x-if="form.status_proceso === 'nunca'">
                             <div class="space-y-3 max-h-64 overflow-y-auto">
                                 <template x-for="(lote, index) in lotesSeleccionados" :key="index">
                                     <div class="grid grid-cols-3 gap-2 items-center">
@@ -200,9 +155,9 @@
                             </div>
                         </template>
 
-                        <template x-if="form.status_proceso !== 'rectificado'">
+                        <template x-if="form.status_proceso !== 'nunca'">
                             <div class="text-gray-700 text-sm">
-                                <p>Los lotes se editarán solo cuando el estado sea <strong>rectificado</strong>.</p>
+                                <p>No tienes los permisos para editar o eliminar lotes.</p>
                                 <template x-if="loteActual.lotes_asignados">
                                     <ul class="mt-2 space-y-1">
                                         <template x-for="(lote, index) in loteActual.lotes_asignados" :key="index">
@@ -220,9 +175,7 @@
                             <button class="px-4 py-2 bg-red-300 rounded hover:bg-red-400 text-sm" @click="cerrarModalCalcelar">Cancelar</button>
                         </div>
 
-                        <div class="mt-4 text-right" x-show="form.status_proceso !== 'confirmado'">
-                            <button class="px-4 py-2 bg-green-300 rounded hover:bg-green-400 text-sm" @click="cerrarModal">Cerrar y Guardar</button>
-                        </div>
+
                     </div>
                 </div>
 

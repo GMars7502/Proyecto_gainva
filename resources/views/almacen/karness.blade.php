@@ -140,9 +140,11 @@
 
         {{-- Botón "Crear Movimiento" (lo usaremos después) --}}
         <div class="text-right mt-6 mb-2">
+            @can('movimiento.create')
             <button @click="openCreateModal()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow hover:shadow-md transition text-sm font-semibold">
                 <i class="fas fa-plus mr-2"></i> Crear Movimiento
             </button>
+            @endcan
         </div>
 
         <?php   
@@ -203,12 +205,16 @@
                                 <td class="py-2 px-3 sm:px-4" x-text="movimiento.lote || '-'"></td>
                                 <td class="py-2 px-3 sm:px-4 text-center">
                                     <div class="flex justify-center items-center space-x-1 sm:space-x-2">
+                                        @can('movimiento.edit')
                                         <button @click="openEditModal(movimiento)" title="Editar" class="p-1 sm:p-1.5 text-yellow-400 hover:text-yellow-300 transition duration-150">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM4 16a2 2 0 01-2-2v-2h1v2a1 1 0 001 1h12a1 1 0 001-1v-6h-2v6H4z"></path></svg>
                                         </button>
+                                        @endcan
+                                        @can('movimiento.delete')
                                         <button @click="confirmDelete(movimiento.idMovimiento)" title="Eliminar" class="p-1 sm:p-1.5 text-red-500 hover:text-red-400 transition duration-150">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm2 4a1 1 0 100 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>
                                         </button>
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
@@ -218,9 +224,11 @@
             </div>
 
             <div class="text-right mt-6 mb-2">
-            <button @click="openCreateModal()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow hover:shadow-md transition text-sm font-semibold">
-                <i class="fas fa-plus mr-2"></i> Crear Movimiento
-            </button>
+                @can('movimiento.create')
+                <button @click="openCreateModal()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow hover:shadow-md transition text-sm font-semibold">
+                    <i class="fas fa-plus mr-2"></i> Crear Movimiento
+                </button>
+                @endcan
             </div>
 
         </div>

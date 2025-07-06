@@ -70,8 +70,7 @@
                     <th class="px-4 py-2 text-left">Cant 3</th>
                     <th class="px-4 py-2 text-left">Lote 4</th>
                     <th class="px-4 py-2 text-left">Cant 4</th>
-                    <th class="px-4 py-2 text-left">Status</th>
-                    <th class="px-4 py-2 text-left">Acción</th>
+                    <th class="px-4 py-2 text-left">---</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -87,24 +86,7 @@
                         <td class="px-4 py-2" x-text="item.cant3 ?? ''"></td>
                         <td class="px-4 py-2" x-text="item.lote4 ?? ''"></td>
                         <td class="px-4 py-2" x-text="item.cant4 ?? ''"></td>
-                        <td class="px-4 py-2">
-                            <span
-                                class="px-2 py-1 rounded text-xs font-semibold"
-                                :class="item.status === 'N' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'"
-                                x-text="item.status"
-                            ></span>
-                        </td>
-                        <td class="px-4 py-2">
-                            <form :action="`/control-cebado/status/${item.idControl}`" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="new_status" :value="item.status === 'N' ? 'Y' : 'N'">
-                                <button type="submit"
-                                    class="text-white bg-blue-500 hover:bg-blue-600 rounded px-3 py-1 text-xs">
-                                    Cambiar
-                                </button>
-                            </form>
-                        </td>
+                        
                     </tr>
                 </template>
             </tbody>

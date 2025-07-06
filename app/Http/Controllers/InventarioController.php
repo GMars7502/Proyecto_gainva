@@ -27,7 +27,7 @@ class InventarioController extends Controller
             ->whereYear('fecha_guardado', $year_actual)
             ->whereMonth('fecha_guardado', $month_actual)
             ->groupBy('idInsumo')
-            ->pluck('total_stock', 'idInsumo'); // Esto crea un array: [idInsumo => total_stock]
+            ->pluck('total_stock', 'idInsumo');
 
         // 2. Obtener todos los insumos del inventario (con nombre si hay relación)
         $data = Inventario::with('insumos')->get()->map(function ($item) use ($stockPorInsumo) {

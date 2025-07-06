@@ -14,16 +14,9 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <style>
-        body {
-            background-image: url('assets/images/Hospital.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-    </style>
+    
 </head>
-<body class="font-sans text-gray-900 antialiased">
+<body class="font-sans text-gray-900 antialiased guest-layout">
     <div class="min-h-screen flex items-center justify-center bg-black bg-opacity-50">
         <div class="w-full max-w-md bg-white bg-opacity-95 rounded-xl shadow-xl p-6">
             <div class="flex justify-center mb-4">

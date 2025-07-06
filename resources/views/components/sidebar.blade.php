@@ -23,7 +23,8 @@
         
         @can('petitorio.index')
         <a href="{{ route('petitorio.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('petitorio.*') ? 'bg-green-800' : '' }}">
-            Petitorio
+            <i class="fas fa-file-alt mr-3"></i>
+            <span x-show="sidebarExpanded">Petitorio</span>
         </a>
         @endcan
 
@@ -36,7 +37,8 @@
 
         @can('inventario.index')
         <a href="{{ route('inventario.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('inventario.*') ? 'bg-green-800' : '' }}">
-            Inventario
+            <i class="fas fa-box-open mr-3"></i>
+            <span x-show="sidebarExpanded">Inventario</span>
         </a>
         @endcan
 
@@ -44,7 +46,8 @@
 
         @can('users.index')
         <a href="{{ route('users.index') }}" class="block px-4 py-2 rounded hover:bg-green-800 {{ request()->routeIs('users.*') ? 'bg-green-800' : '' }}">
-            Usuarios
+            <i class="fas fa-users mr-3"></i>
+            <span x-show="sidebarExpanded">Usuarios</span>
         </a>
         @endcan
 

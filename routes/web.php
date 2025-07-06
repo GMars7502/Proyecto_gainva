@@ -44,16 +44,25 @@ Route::view('profile', 'profile')
 Route::group(['middleware' => 'auth'], function() {
     Route::resource('users', UsuarioController::class)->except([
         'show'
-    ]);
+    ])->middleware('permission:users.index');
+
+
     Route::resource('almacen', AlmacenController::class)->except([
         'show'
-    ]);
+    ])->middleware('permission:almacen.index');
+
+
     Route::resource('control_cebado',ControlCebadoController::class)->except([
         'show'
-    ]);
+    ])->middleware('permission:control_cebado.index');
+
+
+
     Route::resource('inventario', InventarioController::class)->except([
         'show'
-    ]);
+    ])->middleware('permission:inventario.index');
+
+
 
     Route::resource('movimiento_almacen', MovimientoController::class)->except([
         'show'
@@ -63,17 +72,15 @@ Route::group(['middleware' => 'auth'], function() {
         'show'
     ]);
 
-    Route::get('permisos', [PermissionController::class, 'index'])->name('permisos.index');
+    Route::get('permisos', [PermissionController::class, 'index'])->name('permisos.index')->middleware('permission:permisos.index');
      
 
     
-    Route::resource('roles', RoleController::class);
+    Route::resource('roles', RoleController::class)->middleware('permission:role.index');
     
 
 
-    Route::resource('petitorio', PetitorioController::class)->except([
-        'show'
-    ]);
+    Route::resource('petitorio', PetitorioController::class)->middleware('permission:petitorio.index');
 
     
 

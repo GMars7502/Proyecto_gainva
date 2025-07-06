@@ -16,7 +16,10 @@ class Petitorio extends Model
         'insumos_cant',
         'cant_movida',
         'status_proceso',
-        'status_confirmacion'
+        'status_confirmacion',
+        'observacion',
+        'updated_at',
+        'created_at'
     ];
 
 }
