@@ -1,66 +1,96 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Proyecto Pagina_Gainva_v1
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Este proyecto es una aplicación Laravel que utiliza Docker para su entorno de desarrollo.
 
-## About Laravel
+## Requisitos Previos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Antes de comenzar, asegúrate de tener instalado lo siguiente:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+*   **Docker Desktop:** Incluye Docker Engine y Docker Compose.
+    *   [Descargar Docker Desktop](https://www.docker.com/products/docker-desktop)
+*   **(Opcional pero recomendado en Windows) WSL 2:** Asegúrate de que Docker Desktop esté configurado para usar el backend de WSL 2 para un mejor rendimiento de los volúmenes.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Configuración del Entorno
 
-## Learning Laravel
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone [URL_DE_TU_REPOSITORIO]
+    cd pagina_gainva
+    ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+2.  **Configurar el archivo `.env`:**
+    Copia el archivo de ejemplo `.env.example` a `.env` si aún no lo tienes:
+    ```bash
+    cp .env.example .env
+    ```
+    Abre el archivo `.env` y asegúrate de que las variables de conexión a la base de datos coincidan con las configuraciones de Docker:
+    ```ini
+    DB_CONNECTION=mysql
+    DB_HOST=mysql
+    DB_PORT=3306
+    DB_DATABASE=laravel
+    DB_USERNAME=laravel
+    DB_PASSWORD=secret
+    ```
+    También, si no tienes una `APP_KEY` generada, Docker la generará automáticamente durante la construcción, pero puedes añadirla manualmente si ya la tienes:
+    ```ini
+    APP_KEY=base64:TuAppKeyGenerada
+    ```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+3.  **Configuración de PHP (opcional, si necesitas ajustes específicos):**
+    El archivo `.docker/php/php.init` contiene configuraciones PHP. Si necesitas realizar ajustes adicionales (por ejemplo, límites de memoria, tiempo de ejecución, etc.), edita este archivo. Ya incluye configuraciones comunes para desarrollo.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Ejecutar el Proyecto
 
-## Laravel Sponsors
+1.  **Asegúrate de que Docker Desktop esté en ejecución.**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2.  **Detener y Limpiar (recomendado si tuviste problemas anteriores o quieres un inicio limpio):**
+    Si previamente habías levantado los contenedores y deseas una limpieza completa, incluyendo los volúmenes de datos de MySQL (lo que borrará la base de datos):
+    ```bash
+    docker-compose -f Docker-compose.yml down -v
+    ```
+    *Esto eliminará el volumen `dbdata` y la base de datos asociada. Úsalo con precaución.*
 
-### Premium Partners
+3.  **Construir y Levantar los Contenedores:**
+    Desde la raíz del proyecto, ejecuta el siguiente comando:
+    ```bash
+    docker-compose -f Docker-compose.yml up --build -d
+    ```
+    *   `docker-compose -f Docker-compose.yml`: Especifica el archivo de configuración de Docker Compose.
+    *   `up`: Crea y levanta los servicios definidos.
+    *   `--build`: Fuerza la reconstrucción de las imágenes de los servicios (importante para aplicar cambios en `Dockerfile` o `php.init`).
+    *   `-d`: Ejecuta los contenedores en segundo plano.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+4.  **Ejecutar Migraciones y Seeders (después de levantar los contenedores):**
+    Una vez que los contenedores estén corriendo, puedes ejecutar las migraciones de la base de datos y los seeders para poblar datos:
+    ```bash
+    docker-compose -f Docker-compose.yml exec app php artisan migrate --seed
+    ```
 
-## Contributing
+5.  **Acceder a la Aplicación:**
+    Tu aplicación Laravel debería estar accesible en tu navegador en:
+    [http://localhost:8080](http://localhost:8080)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Comandos Útiles de Docker Compose
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+*   **Ver el estado de los servicios:**
+    ```bash
+    docker-compose -f Docker-compose.yml ps
+    ```
+*   **Ver los logs de un servicio (ej. `app`):**
+    ```bash
+    docker-compose -f Docker-compose.yml logs -f app
+    ```
+*   **Ejecutar un comando dentro de un servicio (ej. `app`):**
+    ```bash
+    docker-compose -f Docker-compose.yml exec app bash
+    ```
+    (Esto te dará una terminal dentro del contenedor `app`).
+*   **Detener los servicios:**
+    ```bash
+    docker-compose -f Docker-compose.yml stop
+    ```
+*   **Detener y eliminar los servicios (manteniendo los volúmenes de datos):**
+    ```bash
+    docker-compose -f Docker-compose.yml down
+    ```

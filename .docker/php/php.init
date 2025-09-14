@@ -1,0 +1,24 @@
+; Aumenta el límite de memoria a 512M para evitar problemas con operaciones grandes
+memory_limit = 512M
+
+; Aumenta el tiempo máximo de ejecución de scripts a 300 segundos
+max_execution_time = 300
+
+; Aumenta el tamaño máximo de subida de archivos
+upload_max_filesize = 128M
+post_max_size = 128M
+
+; Deshabilita la visualización de errores en producción por seguridad
+; Para desarrollo, puedes ponerlo en 'On' o '-1'
+display_errors = Off
+display_startup_errors = Off
+
+; Configura el registro de errores para que se envíen a stderr/stdout
+; Esto es útil en entornos Docker para ver los logs con `docker-compose logs`
+error_reporting = E_ALL
+log_errors = On
+error_log = /dev/stderr
+
+; Zona horaria, importante para la consistencia de las fechas en la aplicación
+; Asegúrate de ajustar esto a tu zona horaria real
+date.timezone = America/Lima
