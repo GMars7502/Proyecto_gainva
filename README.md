@@ -31,11 +31,6 @@ Antes de comenzar, asegúrate de tener instalado lo siguiente:
     DB_DATABASE=laravel
     DB_USERNAME=laravel
     DB_PASSWORD=secret
-    ```
-    También, si no tienes una `APP_KEY` generada, Docker la generará automáticamente durante la construcción, pero puedes añadirla manualmente si ya la tienes:
-    ```ini
-    APP_KEY=base64:TuAppKeyGenerada
-    ```
 
 3.  **Configuración de PHP (opcional, si necesitas ajustes específicos):**
     El archivo `.docker/php/php.init` contiene configuraciones PHP. Si necesitas realizar ajustes adicionales (por ejemplo, límites de memoria, tiempo de ejecución, etc.), edita este archivo. Ya incluye configuraciones comunes para desarrollo.
@@ -54,7 +49,7 @@ Antes de comenzar, asegúrate de tener instalado lo siguiente:
 3.  **Construir y Levantar los Contenedores:**
     Desde la raíz del proyecto, ejecuta el siguiente comando:
     ```bash
-    docker-compose -f Docker-compose.yml up --build -d
+    docker compose up -d --build
     ```
     *   `docker-compose -f Docker-compose.yml`: Especifica el archivo de configuración de Docker Compose.
     *   `up`: Crea y levanta los servicios definidos.
