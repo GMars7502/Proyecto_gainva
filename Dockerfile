@@ -15,19 +15,23 @@ COPY .docker/php/php.ini /usr/local/etc/php/conf.d/php.ini
 # Directorio de trabajo
 WORKDIR /var/www/html
 
-# Copiar proyecto
+# Copiar proyecto completo
 COPY . .
 
+# Copiar ejemplo de env
 COPY .env.example .env
 
 # Instalar dependencias PHP
 RUN composer install --no-interaction --optimize-autoloader
 
+# Instalar dependencias JS y compilar assets
+# RUN npm install && npm run build
 
+# Generar key de Laravel
 RUN php artisan key:generate
 
-# Permisos
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Permisos para storage y cache
+RUN chown -R www-data:www-data storage bootstrap/cache
 
 CMD ["php-fpm"]
 EXPOSE 9000
