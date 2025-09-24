@@ -1,0 +1,11 @@
+Codigo de docker para que corrar en dev
+
+Para dev
+
+cambios archivo .env
+
+APP_DEBUG=true
+APP_URL=http://localhost:8080
+VITE_URL=http://localhost:5173
+
+
